@@ -1,28 +1,74 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
+import React from 'react';
+// import 'react-native-gesture-handler';
+import { Provider as PaperProvider } from 'react-native-paper';
+import { NavigationContainer } from '@react-navigation/native';
+import Svg, { Path } from 'react-native-svg';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+// import { createStackNavigator } from '@react-navigation/stack';
+// const Stack = createStackNavigator();
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
 
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <NewAppScreen templateFileName="App.tsx" />
-    </View>
-  );
+import HomeScreen from './src/screens/HomeScreen';
+import MessagesScreen from './src/screens/MessageScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+
+const theme = {
+  fonts: {
+    regular: { fontFamily: "PingFang SC"},
+  },
+};
+
+
+// 创建一个底部 Tab 导航器实例
+const Tab = createBottomTabNavigator();
+const renderIcon = ({ focused, color, size, route }: Record<string, any>) => {
+  console.log('route.navigationKey', route,  route.navigationKey)
+  if (route.name === '消息') {
+    return (
+      <Svg width="17" height="20" viewBox="0 0 17 20" fill="none">
+        <Path fill-rule="evenodd" clip-rule="evenodd" d="M3.33325 2C2.78097 2 2.33325 2.44772 2.33325 3V17C2.33325 17.5523 2.78097 18 3.33325 18H4.30212C4.47615 18 4.64716 17.9546 4.79826 17.8682L6.84483 16.6988C7.76713 16.1717 8.89937 16.1717 9.82167 16.6988L11.8682 17.8682C12.0193 17.9546 12.1904 18 12.3644 18H13.3333C13.8855 18 14.3333 17.5523 14.3333 17V3C14.3333 2.44772 13.8855 2 13.3333 2H3.33325ZM0.333252 3C0.333252 1.34315 1.6764 0 3.33325 0H13.3333C14.9901 0 16.3333 1.34315 16.3333 3V17C16.3333 18.6569 14.9901 20 13.3333 20H12.3644C11.8423 20 11.3293 19.8638 10.876 19.6047L8.82939 18.4353C8.52196 18.2596 8.14455 18.2596 7.83711 18.4353L5.79054 19.6047C5.33725 19.8638 4.8242 20 4.30212 20H3.33325C1.6764 20 0.333252 18.6569 0.333252 17V3ZM4.33325 6.5C4.33325 5.94772 4.78097 5.5 5.33325 5.5H11.8333C12.3855 5.5 12.8333 5.94772 12.8333 6.5C12.8333 7.05228 12.3855 7.5 11.8333 7.5H5.33325C4.78097 7.5 4.33325 7.05228 4.33325 6.5ZM4.33325 11.5C4.33325 10.9477 4.78097 10.5 5.33325 10.5H9.83325C10.3855 10.5 10.8333 10.9477 10.8333 11.5C10.8333 12.0523 10.3855 12.5 9.83325 12.5H5.33325C4.78097 12.5 4.33325 12.0523 4.33325 11.5Z" 
+        fill={color} />
+      </Svg>
+    )
+  }
+  if (route.name === '我的') {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 17 20" fill="none">
+          <Path 
+            d="M8.6665 11C10.6109 11 12.5302 11.1405 13.9897 11.7285C14.7359 12.0292 15.4178 12.4682 15.9116 13.1162C16.4147 13.7764 16.6665 14.5801 16.6665 15.5C16.6665 16.4199 16.4147 17.2236 15.9116 17.8838C15.4178 18.5318 14.7359 18.9708 13.9897 19.2715C12.5302 19.8595 10.6109 20 8.6665 20C6.72209 20 4.80285 19.8595 3.34326 19.2715C2.59713 18.9708 1.91525 18.5318 1.42139 17.8838C0.918284 17.2236 0.666504 16.4199 0.666504 15.5C0.666504 14.5801 0.918284 13.7764 1.42139 13.1162C1.91525 12.4682 2.59713 12.0292 3.34326 11.7285C4.80285 11.1405 6.72209 11 8.6665 11ZM8.6665 13C6.74505 13 5.16422 13.1513 4.09033 13.584C3.56995 13.7937 3.22673 14.0476 3.01221 14.3291C2.80692 14.5986 2.6665 14.9617 2.6665 15.5C2.6665 16.0383 2.80692 16.4014 3.01221 16.6709C3.22673 16.9524 3.56995 17.2063 4.09033 17.416C5.16422 17.8487 6.74505 18 8.6665 18C10.588 18 12.1688 17.8487 13.2427 17.416C13.7631 17.2063 14.1063 16.9524 14.3208 16.6709C14.5261 16.4014 14.6665 16.0383 14.6665 15.5C14.6665 14.9617 14.5261 14.5986 14.3208 14.3291C14.1063 14.0476 13.7631 13.7937 13.2427 13.584C12.1688 13.1513 10.588 13 8.6665 13ZM8.6665 0C11.4279 0 13.6665 2.23858 13.6665 5C13.6665 7.76142 11.4279 10 8.6665 10C5.90508 10 3.6665 7.76142 3.6665 5C3.6665 2.23858 5.90508 0 8.6665 0ZM8.6665 2C7.00965 2 5.6665 3.34315 5.6665 5C5.6665 6.65685 7.00965 8 8.6665 8C10.3234 8 11.6665 6.65685 11.6665 5C11.6665 3.34315 10.3234 2 8.6665 2Z" 
+            fill={color} 
+          />
+        </Svg>
+    )
+  }
+  return ( // 首页
+    <Svg  width="18" height="20" viewBox="0 0 18 20" fill="none">
+       <Path d="M7.42676 0.43604C8.45919 -0.200353 9.78485 -0.154545 10.7754 0.572758L16.7754 4.97901L16.916 5.08838C17.6003 5.65624 18 6.50162 18 7.39698V17.0093C18 18.6661 16.6569 20.0093 15 20.0093H3C1.34315 20.0093 0 18.6661 0 17.0093V7.39698C2.05968e-05 6.44209 0.454961 5.54422 1.22461 4.97901L7.22461 0.572758L7.42676 0.43604ZM9.5918 2.18506C9.23959 1.92643 8.76041 1.92643 8.4082 2.18506L2.4082 6.59131C2.15174 6.77971 2.00002 7.07875 2 7.39698V17.0093C2 17.5616 2.44772 18.0093 3 18.0093H15C15.5523 18.0093 16 17.5616 16 17.0093V7.39698C16 7.11835 15.8837 6.85437 15.6826 6.66651L15.5918 6.59131L9.5918 2.18506ZM9 13.0093C9.55226 13.0093 9.99996 13.457 10 14.0093V16.0093C10 16.5616 9.55229 17.0093 9 17.0093C8.44771 17.0093 8 16.5616 8 16.0093V14.0093C8.00004 13.457 8.44774 13.0093 9 13.0093Z" 
+        fill={color} />
+    </Svg>
+  )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+const App = () => {
+  return (
+    <PaperProvider theme={theme}>
+       <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={({ route }) => ({
+            tabBarIcon: (params) => renderIcon({...params, route}),
+            tabBarActiveTintColor: '#1A5C4F',
+            tabBarInactiveTintColor: 'gray', 
+            headerShown: false, 
+          })}
+        >
+          <Tab.Screen name="首页" component={HomeScreen} />
+          <Tab.Screen name="消息" component={MessagesScreen} />
+          <Tab.Screen name="我的" component={ProfileScreen} />
+        </Tab.Navigator>
+      </NavigationContainer>
+    </PaperProvider>
+  );
+};
 
 export default App;
