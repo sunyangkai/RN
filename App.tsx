@@ -1,12 +1,11 @@
 
 import React from 'react';
-// import 'react-native-gesture-handler';
-import { Provider as PaperProvider } from 'react-native-paper';
+// import { Provider as PaperProvider } from 'react-native-paper';
 import { NavigationContainer } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-// import { createStackNavigator } from '@react-navigation/stack';
-// const Stack = createStackNavigator();
+import { navigationRef } from './src/service/navivation'; 
+
 
 
 import HomeScreen from './src/screens/HomeScreen';
@@ -23,7 +22,6 @@ const theme = {
 // 创建一个底部 Tab 导航器实例
 const Tab = createBottomTabNavigator();
 const renderIcon = ({ focused, color, size, route }: Record<string, any>) => {
-  console.log('route.navigationKey', route,  route.navigationKey)
   if (route.name === '消息') {
     return (
       <Svg width="17" height="20" viewBox="0 0 17 20" fill="none">
@@ -52,8 +50,7 @@ const renderIcon = ({ focused, color, size, route }: Record<string, any>) => {
 
 const App = () => {
   return (
-    <PaperProvider theme={theme}>
-       <NavigationContainer>
+       <NavigationContainer ref={navigationRef}>
         <Tab.Navigator
           screenOptions={({ route }) => ({
             tabBarIcon: (params) => renderIcon({...params, route}),
@@ -67,7 +64,6 @@ const App = () => {
           <Tab.Screen name="我的" component={ProfileScreen} />
         </Tab.Navigator>
       </NavigationContainer>
-    </PaperProvider>
   );
 };
 

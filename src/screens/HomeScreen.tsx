@@ -1,7 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ImageBackground, Image  } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Image, TouchableOpacity  } from 'react-native';
+import { navigate } from '../service/navivation';
 
 const HomeScreen = () => {
+  const goNetProcecss = () => {
+    console.log('goprocesssss')
+    navigate('我的', {})
+  }
   return (
     <View style={styles.container}>
        <ImageBackground 
@@ -12,9 +17,11 @@ const HomeScreen = () => {
           <Text style={styles.hello}>¡Hola, amigo!</Text>
           <Text style={styles.limit}>Su límite es</Text>
           <Text style={styles.num}>$ 3,000,000</Text>
-          <View style={styles.button}>
-            <Text style={styles.buttonText}>Solicitar ahora</Text>
-          </View>
+          <TouchableOpacity onPress={goNetProcecss}>
+            <View style={styles.button}>
+              <Text style={styles.buttonText}>Solicitar ahora test</Text>
+            </View>
+          </TouchableOpacity>
         </ImageBackground >
         <Image resizeMode="contain"  style={styles.women} source={require('../assets/imgs/women.png')} />
     </View>
@@ -70,7 +77,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 80,
-    zIndex:2,
+    zIndex:100,
+    position: 'relative',
     backgroundColor: '#1a5c4f'
   },
   buttonText: {

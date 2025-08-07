@@ -4,7 +4,7 @@ import { View, Text, StyleSheet } from 'react-native';
 const ProfileScreen = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>这是“我的”页面</Text>
+      <Text style={styles.text}>我的页面</Text>
     </View>
   );
 };

@@ -1,0 +1,55 @@
+{
+  "type": "delta_patch",
+  "version": "1.0",
+  "sourceHash": "sha256:32c797dd711b53eb561ece252e7a13d80ed1f701608a07c1dd64ced9d843c8f9",
+  "targetHash": "sha256:b605b8bee5101dbbdd20a026b1512b5f147a62a3317df443a673bd9ef70d7c49",
+  "operations": [
+    {
+      "type": "insert",
+      "position": 1156270,
+      "data": "console.log"
+    },
+    {
+      "type": "insert",
+      "position": 1156282,
+      "data": "'goprocess'),("
+    },
+    {
+      "type": "insert",
+      "position": 1156449,
+      "data": " test"
+    },
+    {
+      "type": "delete",
+      "start": 1315503,
+      "length": 6
+    },
+    {
+      "type": "delete",
+      "start": 1315504,
+      "length": 6
+    },
+    {
+      "type": "delete",
+      "start": 1315506,
+      "length": 5
+    },
+    {
+      "type": "delete",
+      "start": 1315507,
+      "length": 1
+    },
+    {
+      "type": "delete",
+      "start": 1315515,
+      "length": 6
+    }
+  ],
+  "metadata": {
+    "generatedAt": "2025-08-07T09:30:21.040Z",
+    "oldSize": 1562344,
+    "newSize": 1562350,
+    "patchSize": 130,
+    "operationsCount": 8
+  }
+}

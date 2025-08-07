@@ -1,0 +1,32 @@
+{
+  "version": "0.0.4",
+  "updateType": "delta",
+  "fullBundle": {
+    "url": "http://192.168.2.173:3000/bundles/0.0.4/index.android.bundle",
+    "hash": "sha256:c9eabe73d96d26c53622c666884ccdc248e40e26f907169ba424648ab6729dde",
+    "size": 1562256
+  },
+  "deltaUpdates": {
+    "0.0.1": {
+      "patchUrl": "http://192.168.2.173:3000/patches/0.0.1-to-0.0.2.patch",
+      "patchHash": "sha256:32c797dd711b53eb561ece252e7a13d80ed1f701608a07c1dd64ced9d843c8f9",
+      "patchSize": 40,
+      "targetHash": "sha256:32c797dd711b53eb561ece252e7a13d80ed1f701608a07c1dd64ced9d843c8f9"
+    },
+    "0.0.2": {
+      "patchUrl": "http://192.168.2.173:3000/patches/0.0.2-to-0.0.3.patch",
+      "patchHash": "sha256:b605b8bee5101dbbdd20a026b1512b5f147a62a3317df443a673bd9ef70d7c49",
+      "patchSize": 130,
+      "targetHash": "sha256:b605b8bee5101dbbdd20a026b1512b5f147a62a3317df443a673bd9ef70d7c49"
+    },
+    "0.0.3": {
+      "patchUrl": "http://192.168.2.173:3000/patches/0.0.3-to-0.0.4.patch",
+      "patchHash": "sha256:c9eabe73d96d26c53622c666884ccdc248e40e26f907169ba424648ab6729dde",
+      "patchSize": 1935,
+      "targetHash": "sha256:c9eabe73d96d26c53622c666884ccdc248e40e26f907169ba424648ab6729dde"
+    }
+  },
+  "fallback": {
+    "url": "http://192.168.2.173:3000/bundles/0.0.4/index.android.bundle"
+  }
+}

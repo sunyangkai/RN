@@ -1,35 +1,40 @@
 {
   "name": "demo",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "build": "npx react-native bundle --entry-file index.js --platform android  --dev false --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/",
+    "buildmock": "node build-scripts.js buildmock",
+    "buildmockpatch": "node build-scripts.js buildmockpath"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native/new-app-screen": "0.80.1",
     "@react-navigation/bottom-tabs": "^7.4.2",
     "@react-navigation/native": "^7.1.16",
-    "@react-navigation/stack": "^7.4.4",
+    "crypto-js": "^4.2.0",
+    "diff": "^8.0.2",
     "react": "19.1.0",
     "react-native": "0.80.1",
-    "react-native-gesture-handler": "^2.27.2",
+    "react-native-fs": "^2.20.0",
     "react-native-paper": "^5.14.5",
-    "react-native-reanimated": "^4.0.1",
+    "react-native-restart": "^0.0.27",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.13.1",
     "react-native-svg": "^15.12.0",
-    "react-native-vector-icons": "^10.3.0",
-    "react-native-worklets": "^0.4.0"
+    "react-native-vector-icons": "^10.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.25.0",
+    "@callstack/repack": "^5.1.3",
     "@react-native-community/cli": "19.0.0",
     "@react-native-community/cli-platform-android": "19.0.0",
     "@react-native-community/cli-platform-ios": "19.0.0",
@@ -49,5 +54,9 @@
   },
   "engines": {
     "node": ">=18"
-  }
+  },
+  "description": "npx react-native bundle --entry-file index.js --platform android  --dev false --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/",
+  "main": "index.js",
+  "author": "",
+  "license": "ISC"
 }
