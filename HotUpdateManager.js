@@ -32,8 +32,8 @@ async function calculateFileHash(filePath) {
     if (!(await RNFS.exists(filePath))) return null;
     const fileContent = await RNFS.readFile(filePath, 'utf8');
     console.log('fileContent')
-    // 使用与服务端一致的哈希计算方式
-    return 'sha256:' + CryptoJS.SHA256(fileContent).toString();
+    // 使用与服务端一致的哈希计算方式 - 转换为hex格式
+    return 'sha256:' + CryptoJS.SHA256(fileContent).toString(CryptoJS.enc.Hex);
   } catch (error) {
     console.error('计算文件哈希失败:', error);
     return null;
@@ -54,7 +54,7 @@ async function applyPatch(oldBundlePath, patchPath, outputPath) {
     
     // 验证源文件哈希（如果补丁中提供）
     if (patch.sourceHash) {
-      const currentHash = 'sha256:' + CryptoJS.SHA256(bundleContent).toString();
+      const currentHash = 'sha256:' + CryptoJS.SHA256(bundleContent).toString(CryptoJS.enc.Hex);
       if (currentHash !== patch.sourceHash) {
         console.warn('⚠️ 源文件哈希不匹配，可能版本不一致');
         throw new Error('源文件哈希验证失败');
@@ -100,7 +100,7 @@ async function applyPatch(oldBundlePath, patchPath, outputPath) {
     
     // 验证目标文件哈希（如果补丁中提供）
     if (patch.targetHash) {
-      const resultHash = 'sha256:' + CryptoJS.SHA256(bundleContent).toString();
+      const resultHash = 'sha256:' + CryptoJS.SHA256(bundleContent).toString(CryptoJS.enc.Hex);
       if (resultHash !== patch.targetHash) {
         console.error('❌ 目标文件哈希验证失败');
         throw new Error('目标文件哈希验证失败');
@@ -121,7 +121,6 @@ export async function checkAndUpdateBundle() {
   try {
     const res = await fetch(MANIFEST_URL);
     const manifest = await res.json();
-    AsyncStorage.setItem(VERSION_KEY, '0.0.1')
     const currentVersion = await AsyncStorage.getItem(VERSION_KEY);
 
     console.log('manifest', manifest);

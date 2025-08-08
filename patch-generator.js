@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const Diff = require('diff');
-const crypto = require('crypto');
+const CryptoJS = require('crypto-js');
 
 const CONFIG = {
   PATCH_SIZE_THRESHOLD: 0.6 // 补丁大小阈值，超过（60%）则使用完整下载
@@ -9,7 +9,7 @@ const CONFIG = {
 
 
 function calculateHash(content) {
-  return 'sha256:' + crypto.createHash('sha256').update(content).digest('hex');
+  return 'sha256:' + CryptoJS.SHA256(content).toString(CryptoJS.enc.Hex);
 }
 
 
