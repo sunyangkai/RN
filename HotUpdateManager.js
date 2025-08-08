@@ -28,10 +28,8 @@ async function cleanupTempFiles() {
 // 计算文件哈希
 async function calculateFileHash(filePath) {
   try {
-    console.log('filePath', filePath)
     if (!(await RNFS.exists(filePath))) return null;
     const fileContent = await RNFS.readFile(filePath, 'utf8');
-    console.log('fileContent')
     // 使用与服务端一致的哈希计算方式 - 转换为hex格式
     return 'sha256:' + CryptoJS.SHA256(fileContent).toString(CryptoJS.enc.Hex);
   } catch (error) {
@@ -55,10 +53,15 @@ async function applyPatch(oldBundlePath, patchPath, outputPath) {
     // 验证源文件哈希（如果补丁中提供）
     if (patch.sourceHash) {
       const currentHash = 'sha256:' + CryptoJS.SHA256(bundleContent).toString(CryptoJS.enc.Hex);
+      console.log('🔍 源文件哈希验证:');
+      console.log('  期望哈希:', patch.sourceHash);
+      console.log('  实际哈希:', currentHash);
+      console.log('  文件大小:', bundleContent.length);
       if (currentHash !== patch.sourceHash) {
         console.warn('⚠️ 源文件哈希不匹配，可能版本不一致');
         throw new Error('源文件哈希验证失败');
       }
+      console.log('✅ 源文件哈希验证成功');
     }
     
     console.log(`🔧 应用 ${patch.operations?.length || 0} 个补丁操作`);
@@ -71,9 +74,7 @@ async function applyPatch(oldBundlePath, patchPath, outputPath) {
     });
     
     // 应用补丁操作
-    for (const operation of operations) {
-      const originalLength = bundleContent.length;
-      
+    for (const operation of operations) {      
       switch (operation.type) {
         case 'insert':
           if (operation.position > bundleContent.length) {
@@ -95,12 +96,15 @@ async function applyPatch(oldBundlePath, patchPath, outputPath) {
           break;
       }
       
-      console.log(`✓ 操作 ${operation.type} 完成，文件大小: ${originalLength} -> ${bundleContent.length}`);
     }
     
     // 验证目标文件哈希（如果补丁中提供）
     if (patch.targetHash) {
       const resultHash = 'sha256:' + CryptoJS.SHA256(bundleContent).toString(CryptoJS.enc.Hex);
+      console.log('🔍 目标哈希验证:');
+      console.log('  期望哈希:', patch.targetHash);
+      console.log('  实际哈希:', resultHash);
+      console.log('  文件大小:', bundleContent.length);
       if (resultHash !== patch.targetHash) {
         console.error('❌ 目标文件哈希验证失败');
         throw new Error('目标文件哈希验证失败');
@@ -128,26 +132,20 @@ export async function checkAndUpdateBundle() {
     
     if (manifest.version !== currentVersion) {
       await cleanupTempFiles();
-      
-      // 尝试差量更新
+
       if (manifest.updateType === 'delta' && 
-          manifest.deltaUpdates && 
-          manifest.deltaUpdates[currentVersion]) {
+          manifest.deltaUpdate && 
+          currentVersion && 
+          await RNFS.exists(BUNDLE_LOCAL_PATH)) {
         
-        const deltaInfo = manifest.deltaUpdates[currentVersion];
-        console.log('🔄 尝试差量更新...');
-        
+        const deltaInfo = manifest.deltaUpdate;        
         try {
-          // 下载补丁文件
           const patchDownloadResult = await RNFS.downloadFile({
             fromUrl: deltaInfo.patchUrl,
-            toFile: PATCH_TEMP_PATH, // 补丁文件被写入这个路径
+            toFile: PATCH_TEMP_PATH,
           }).promise;
-          console.log('写入差量wenj', patchDownloadResult)
           if (patchDownloadResult.statusCode === 200) {
-            // 验证补丁文件哈希
             const patchHash = await calculateFileHash(PATCH_TEMP_PATH); 
-            console.log('hash校验', patchHash, deltaInfo.patchHash)
             if (patchHash === deltaInfo.patchHash) {
               
               // 应用补丁
@@ -165,7 +163,7 @@ export async function checkAndUpdateBundle() {
                   // 原子性替换
                   await RNFS.moveFile(BUNDLE_TEMP_PATH, BUNDLE_LOCAL_PATH);
                   await AsyncStorage.setItem(VERSION_KEY, manifest.version);
-                  console.log('🎉 差量更新完成！');
+                  console.log('差量更新完成！');
                   
                   showUpdateAlert();
                   return;
@@ -176,7 +174,7 @@ export async function checkAndUpdateBundle() {
                 console.error('应用补丁失败，回退到完整下载');
               }
             } else {
-              console.error('补丁文件哈希验证失败，回退到完整下载');
+              console.error('补丁文件哈希验证失败，回退到完整下载', patchHash, deltaInfo.patchHash);
             }
           } else {
             console.error('补丁下载失败，回退到完整下载');
@@ -188,7 +186,7 @@ export async function checkAndUpdateBundle() {
       
       // 完整下载（回退方案）
       console.log('📦 执行完整下载...');
-      const downloadUrl = manifest.fallback?.url || manifest.fullBundle?.url;
+      const downloadUrl = manifest.fullBundle?.url;
       
       const downloadResult = await RNFS.downloadFile({
         fromUrl: downloadUrl,

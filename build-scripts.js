@@ -17,26 +17,19 @@ const CONFIG = {
   SERVER_BASE_URL: 'http://192.168.2.173:3000'
 };
 
-/**
- * 确保目录存在
- */
+
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
   }
 }
 
-/**
- * 获取package.json中的版本号
- */
+
 function getVersion() {
   const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
   return packageJson.version;
 }
 
-/**
- * 读取或创建manifest
- */
 function getManifest() {
   if (fs.existsSync(CONFIG.MANIFEST_PATH)) {
     return JSON.parse(fs.readFileSync(CONFIG.MANIFEST_PATH, 'utf8'));
@@ -50,10 +43,7 @@ function getManifest() {
       hash: "",
       size: 0
     },
-    deltaUpdates: {},
-    fallback: {
-      url: ""
-    }
+    deltaUpdate: null,
   };
 }
 
@@ -62,10 +52,10 @@ function getManifest() {
  */
 async function buildMock() {
   try {
-    console.log('🏗️ 开始构建mock版本...');
+    console.log('开始构建mock版本...');
     
     const version = getVersion();
-    console.log(`📦 当前版本: ${version}`);
+    console.log(`当前版本: ${version}`);
     
     // 确保目录存在
     ensureDir(CONFIG.CDN_MOCK_DIR);
@@ -73,7 +63,7 @@ async function buildMock() {
     ensureDir(path.join(CONFIG.BUNDLES_DIR, version));
     
     // 执行React Native打包
-    console.log('📱 执行React Native打包...');
+    console.log('执行React Native打包...');
     execSync(`npx react-native bundle --entry-file index.js --platform android --dev false --bundle-output ${CONFIG.CDN_MOCK_DIR}/${CONFIG.BUNDLE_FILE} --assets-dest ${CONFIG.ASSETS_DIR}/`, {
       stdio: 'inherit'
     });
@@ -116,9 +106,7 @@ async function buildMockPath() {
     console.log('🔧 开始生成补丁包...');
     
     const currentVersion = getVersion();
-    console.log(`📦 当前版本: ${currentVersion}`);
-    
-    // 确保目录存在
+    console.log(`📦 更新版本: ${currentVersion}`);
     ensureDir(CONFIG.PATCHES_DIR);
     
     // 获取现有manifest
@@ -126,29 +114,29 @@ async function buildMockPath() {
     const previousVersion = manifest.version;
     
     if (previousVersion === currentVersion) {
-      console.log('⚠️ 版本未变化，无需生成补丁');
+      console.log('版本未变化，无需生成补丁');
       return;
     }
     
-    console.log(`🔄 从版本 ${previousVersion} 更新到 ${currentVersion}`);
+    console.log(`从版本 ${previousVersion} 更新到 ${currentVersion}`);
     
     // 检查文件是否存在
     const oldBundlePath = path.join(CONFIG.BUNDLES_DIR, previousVersion, CONFIG.BUNDLE_FILE);
     const newBundlePath = path.join(CONFIG.BUNDLES_DIR, currentVersion, CONFIG.BUNDLE_FILE);
     
     if (!fs.existsSync(oldBundlePath)) {
-      console.error(`❌ 找不到旧版本bundle: ${oldBundlePath}`);
+      console.error(`找不到旧版本bundle: ${oldBundlePath}`);
       throw new Error('旧版本bundle不存在');
     }
     
     if (!fs.existsSync(newBundlePath)) {
-      console.error(`❌ 找不到新版本bundle: ${newBundlePath}`);
+      console.error(`找不到新版本bundle: ${newBundlePath}`);
       console.log('💡 请先运行 npm run buildmock 生成新版本');
       throw new Error('新版本bundle不存在');
     }
     
     // 生成补丁
-    console.log('🔨 生成补丁文件...');
+    console.log('生成补丁文件...');
     const patchResult = await generatePatch(oldBundlePath, newBundlePath, CONFIG.PATCHES_DIR);
     
     if (!patchResult.success) {
@@ -166,6 +154,10 @@ async function buildMockPath() {
     
     console.log(`📁 补丁文件: ${finalPatchPath}`);
     
+    // 计算补丁文件hash
+    const patchContent = fs.readFileSync(finalPatchPath, 'utf8');
+    const patchHash = calculateHash(patchContent);
+    
     // 获取新版本bundle信息
     const newBundleContent = fs.readFileSync(newBundlePath, 'utf8');
     const newBundleSize = newBundleContent.length;
@@ -181,14 +173,11 @@ async function buildMockPath() {
         hash: newBundleHash,
         size: newBundleSize
       },
-      deltaUpdates: {
-        ...manifest.deltaUpdates,
-        [previousVersion]: {
-          patchUrl: `${CONFIG.SERVER_BASE_URL}/patches/${patchFileName}`,
-          patchHash: patchResult.patch.targetHash,
-          patchSize: patchResult.stats.patchSize,
-          targetHash: newBundleHash
-        }
+      deltaUpdate: {
+        patchUrl: `${CONFIG.SERVER_BASE_URL}/patches/${patchFileName}`,
+        patchHash: patchHash,
+        patchSize: patchResult.stats.patchSize,
+        targetHash: newBundleHash
       },
       fallback: {
         url: `${CONFIG.SERVER_BASE_URL}/bundles/${currentVersion}/${CONFIG.BUNDLE_FILE}`

@@ -105,12 +105,9 @@ function estimatePatchSize(operations) {
 async function generatePatch(oldBundlePath, newBundlePath, outputDir = './patches') {
   try {
     console.log('开始生成补丁...');
-        const oldContent = fs.readFileSync(oldBundlePath, 'utf8');
+    const oldContent = fs.readFileSync(oldBundlePath, 'utf8');
     const newContent = fs.readFileSync(newBundlePath, 'utf8');
-    
-    console.log(`旧文件大小: ${oldContent.length} 字符`);
-    console.log(`新文件大小: ${newContent.length} 字符`);
-    
+
     // 使用 jsdiff 计算差异
     const diffResult = Diff.diffChars(oldContent, newContent);
     
@@ -130,7 +127,7 @@ async function generatePatch(oldBundlePath, newBundlePath, outputDir = './patche
     
     // 检查是否应该使用差量更新
     if (sizeRatio > CONFIG.PATCH_SIZE_THRESHOLD) {
-      console.log('变化太大，建议使用完整下载');
+      console.log('变化太大，使用完整下载');
       return {
         success: false,
         reason: 'patch_too_large',

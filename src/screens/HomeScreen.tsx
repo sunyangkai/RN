@@ -4,7 +4,6 @@ import { navigate } from '../service/navivation';
 
 const HomeScreen = () => {
   const goNetProcecss = () => {
-    console.log('goprocesssss')
     navigate('我的', {})
   }
   return (
@@ -16,10 +15,10 @@ const HomeScreen = () => {
         >
           <Text style={styles.hello}>¡Hola, amigo!</Text>
           <Text style={styles.limit}>Su límite es</Text>
-          <Text style={styles.num}>$ 3,000,000</Text>
+          <Text style={styles.num}>$ 4,000,000</Text>
           <TouchableOpacity onPress={goNetProcecss}>
             <View style={styles.button}>
-              <Text style={styles.buttonText}>Solicitar ahora test</Text>
+              <Text style={styles.buttonText}>Solicitar ahora tests</Text>
             </View>
           </TouchableOpacity>
         </ImageBackground >
