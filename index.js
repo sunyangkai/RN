@@ -4,7 +4,7 @@
 
 import { AppRegistry } from 'react-native';
 import { name as appName } from './app.json';
-import { checkAndUpdateBundle } from './HotUpdateManager';
+import { checkAndUpdateBundle } from './hot-update-manager';
 
 async function startApp() {
     const { default: App } = require('./App');
