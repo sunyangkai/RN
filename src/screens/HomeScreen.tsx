@@ -6,6 +6,7 @@ const HomeScreen = () => {
   const goNetProcecss = () => {
     navigate('我的', {})
   }
+  console.log('HomeScreen');
   return (
     <View style={styles.container}>
        <ImageBackground 
@@ -18,7 +19,7 @@ const HomeScreen = () => {
           <Text style={styles.num}>$ 4,000,000</Text>
           <TouchableOpacity onPress={goNetProcecss}>
             <View style={styles.button}>
-              <Text style={styles.buttonText}>Solicitar ahora tests</Text>
+              <Text style={styles.buttonText}>Solicitar ahora tests实施</Text>
             </View>
           </TouchableOpacity>
         </ImageBackground >

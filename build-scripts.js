@@ -163,6 +163,10 @@ async function buildMockPath() {
     const newBundleSize = newBundleContent.length;
     const newBundleHash = calculateHash(newBundleContent);
     
+    // 获取旧版本bundle哈希作为previousHash
+    const oldBundleContent = fs.readFileSync(oldBundlePath, 'utf8');
+    const previousHash = calculateHash(oldBundleContent);
+    
     // 更新manifest
     console.log('📝 更新manifest...');
     const updatedManifest = {
@@ -171,7 +175,8 @@ async function buildMockPath() {
       fullBundle: {
         url: `${CONFIG.SERVER_BASE_URL}/bundles/${currentVersion}/${CONFIG.BUNDLE_FILE}`,
         hash: newBundleHash,
-        size: newBundleSize
+        size: newBundleSize,
+        previousHash: previousHash
       },
       deltaUpdate: {
         patchUrl: `${CONFIG.SERVER_BASE_URL}/patches/${patchFileName}`,

@@ -33,7 +33,7 @@ jsdiff 的 diffResult 格式：
  */
 function convertDiffToPatch(diffResult) {
   /* diff库返回的结果，只会包含三种类型，删除，新增，不变
-    本质上，diff操作将代码修改视为两种原子操作，新增和删除。修改操作被分解为删除 + 新增
+     本质上，diff操作将代码修改视为两种原子操作，新增和删除。修改操作被分解为删除 + 新增
   */
   const operations = [];
   let currentPosition = 0;
@@ -45,13 +45,16 @@ function convertDiffToPatch(diffResult) {
         start: currentPosition,
         length: part.value.length
       });
+      // 修复：删除操作后需要更新位置，因为我们是在原文件中追踪位置
+      currentPosition += part.value.length;
     } else if (part.added) {
       operations.push({
         type: 'insert',
         position: currentPosition,
         data: part.value
       });
-      currentPosition += part.value.length;
+      // 注意：插入操作后不更新位置，因为插入是在目标文件中的操作
+      // currentPosition 保持不变，指向原文件中的相同位置
     } else {
       currentPosition += part.value.length;
     }
