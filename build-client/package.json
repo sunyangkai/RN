@@ -1,0 +1,22 @@
+{
+  "name": "build-client",
+  "version": "1.0.0",
+  "description": "构建客户端 - 专注核心构建逻辑",
+  "main": "index.js",
+  "scripts": {
+    "build-ota": "node index.js build-OTA",
+    "build-ota:patch": "node index.js build-OTA type=patch"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "crypto-js": "^4.1.1"
+  },
+  "keywords": [
+    "build",
+    "react-native",
+    "patch",
+    "diff"
+  ],
+  "author": "",
+  "license": "MIT"
+}

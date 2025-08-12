@@ -1,6 +1,6 @@
 {
   "name": "demo",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -8,8 +8,8 @@
     "start": "react-native start",
     "test": "jest",
     "build": "npx react-native bundle --entry-file index.js --platform android  --dev false --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/",
-    "buildmock": "node build-scripts.js buildmock",
-    "buildmockpatch": "node build-scripts.js buildmockpath"
+    "build-ota": "cd build-client && node index.js build-OTA",
+    "build-ota:patch": "cd build-client && node index.js build-OTA type=patch"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",

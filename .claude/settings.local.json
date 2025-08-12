@@ -3,7 +3,8 @@
     "allow": [
       "Bash(mv java-simple java-client)",
       "Bash(powershell -Command \"Rename-Item -Path ''java-simple'' -NewName ''java-client''\")",
-      "Bash(cp C:/Users/Administrator/sunyk/demo/cdn-mock/manifest.json C:/Users/Administrator/sunyk/demo/build-server/src/main/resources/)"
+      "Bash(cp C:/Users/Administrator/sunyk/demo/cdn-mock/manifest.json C:/Users/Administrator/sunyk/demo/build-server/src/main/resources/)",
+      "Bash(npm run build-ota)"
     ],
     "deny": [],
     "ask": []

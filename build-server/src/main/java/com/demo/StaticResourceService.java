@@ -80,7 +80,7 @@ public class StaticResourceService {
             String requestPath = exchange.getRequestURI().getPath();
             String fileName = requestPath.substring(requestPath.indexOf(baseDir) + baseDir.length() + 1);
             
-            java.nio.file.Path filePath = Paths.get("src/main/resources", baseDir, fileName);
+            java.nio.file.Path filePath = Paths.get("build", baseDir, fileName);
             
             try {
                 if (!Files.exists(filePath)) {
@@ -120,7 +120,7 @@ public class StaticResourceService {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             try {
-                java.nio.file.Path manifestPath = Paths.get("src/main/resources/manifest.json");
+                java.nio.file.Path manifestPath = Paths.get("build/manifest.json");
                 
                 if (!Files.exists(manifestPath)) {
                     exchange.sendResponseHeaders(404, 0);
