@@ -1,0 +1,15 @@
+{
+  "name": "build-server-client",
+  "version": "1.0.0",
+  "description": "Node.js客户端，用于调用Java diff服务",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/integration-test.js"
+  },
+  "keywords": ["diff", "patch", "hot-update"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.5.0"
+  }
+}

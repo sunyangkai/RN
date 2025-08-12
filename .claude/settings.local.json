@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv java-simple java-client)",
+      "Bash(powershell -Command \"Rename-Item -Path ''java-simple'' -NewName ''java-client''\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

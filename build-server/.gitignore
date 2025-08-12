@@ -1,0 +1,29 @@
+# Java
+java-service/target/
+java-service/.mvn/
+java-service/mvnw
+java-service/mvnw.cmd
+*.jar
+*.war
+*.class
+
+# Node.js
+node-client/node_modules/
+node-client/package-lock.json
+
+# Logs
+*.log
+logs/
+
+# Test output
+test/output/
+test/temp/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
