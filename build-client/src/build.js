@@ -5,7 +5,7 @@ const { execSync } = require('child_process');
 const { ensureDir, getVersion } = require('./utils/file-utils');
 const { calculateHash } = require('./utils/hash-utils');
 const CONFIG = require('./utils/config');
-const JavaService = require('./services/java-service');
+const javaServiceManager = require('./services/java-service-manager');
 const ManifestService = require('./services/manifest-service');
 
 /**
@@ -98,16 +98,9 @@ async function buildPatch() {
       throw new Error('新版本bundle不存在');
     }
     
-    // 启动Java服务并生成补丁
-    const javaService = new JavaService();
-    await javaService.start();
-    
-    let patchResult;
-    try {
-      patchResult = await javaService.generatePatch(oldBundlePath, newBundlePath, CONFIG.PATCHES_DIR);
-    } finally {
-      javaService.stop();
-    }
+    // 使用共享的Java服务生成补丁
+    console.log('🔧 使用共享Java服务生成补丁...');
+    const patchResult = await javaServiceManager.generatePatch(oldBundlePath, newBundlePath, CONFIG.PATCHES_DIR);
     
     if (!patchResult.success) {
       if (patchResult.reason === 'patch_too_large') {

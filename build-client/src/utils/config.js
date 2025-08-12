@@ -14,7 +14,7 @@ const CONFIG = {
   CDN_MOCK_DIR: '../cdn-mock',
   
   BUNDLE_FILE: 'index.android.bundle',
-  SERVER_BASE_URL: 'http://localhost:8082'  // 客户端访问地址
+  SERVER_BASE_URL: 'http://localhost:8040'  // 客户端访问地址
 };
 
 module.exports = CONFIG;

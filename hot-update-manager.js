@@ -3,10 +3,9 @@ import { Alert, NativeModules } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNRestart from 'react-native-restart';
 import CryptoJS from 'crypto-js';
+import { MANIFEST_URL } from './src/config/update-config';
 
 const { PatchApplier } = NativeModules;
-
-const MANIFEST_URL = 'http://192.168.2.173:3000/manifest.json'; // 更新文件地址
 const BUNDLE_LOCAL_PATH = `${RNFS.DocumentDirectoryPath}/hotupdate.bundle`; // 本地上一个版本的资源文件
 const BUNDLE_TEMP_PATH = `${RNFS.DocumentDirectoryPath}/hotupdate.bundle.tmp`; // 通过本次热更新生成的临时资源文件
 const PATCH_TEMP_PATH = `${RNFS.DocumentDirectoryPath}/hotupdate.patch.tmp`; // 补丁文件被写入这个本地路径
@@ -191,6 +190,7 @@ async function applyDeltaPatch(oldBundlePath, patch, outputPath) {
 
 export async function checkAndUpdateBundle() {
   try {
+    console.log('🔍 检查热更新...', MANIFEST_URL);
     const res = await fetch(MANIFEST_URL);
     const manifest = await res.json();
     const currentVersion = await AsyncStorage.getItem(VERSION_KEY);

@@ -51,6 +51,9 @@ public class UnifiedService {
         server.createContext("/api/static/patches/", new StaticPatchesHandler());
         server.createContext("/api/static/manifest.json", new StaticManifestHandler());
         
+        // 添加直接的 manifest.json 路由用于热更新
+        server.createContext("/manifest.json", new StaticManifestHandler());
+        
         server.setExecutor(null);
         server.start();
     }

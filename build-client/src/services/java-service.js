@@ -20,7 +20,7 @@ class JavaService {
     this.process = spawn('java', [
       '-jar',
       jarPath,
-      '8082'
+      '8040'
     ], {
       cwd: __dirname,
       stdio: ['pipe', 'pipe', 'pipe']
@@ -38,7 +38,7 @@ class JavaService {
     await new Promise((resolve, reject) => {
       const checkService = async () => {
         try {
-          await axios.get(`${CONFIG.SERVER_BASE_URL}/health`, { timeout: 1000 });
+          await axios.get(`http://localhost:8040/health`, { timeout: 1000 });
           console.log('✅ Java服务启动成功');
           resolve();
         } catch (error) {
@@ -66,7 +66,7 @@ class JavaService {
     try {
       console.log('🔧 调用Java服务生成补丁...');
       
-      const response = await axios.post(`${CONFIG.SERVER_BASE_URL}/api/generate-patch`, {
+      const response = await axios.post(`http://localhost:8040/api/generate-patch`, {
         oldFile: path.resolve(oldBundlePath).replace(/\\/g, '/'),
         newFile: path.resolve(newBundlePath).replace(/\\/g, '/'),
         outputDir: path.resolve(outputDir).replace(/\\/g, '/')
