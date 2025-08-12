@@ -9,7 +9,8 @@ class CustomPackageManager : ReactPackage {
     
     override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
         return listOf(
-            DeviceInfoModule(reactContext)
+            DeviceInfoModule(reactContext),
+            PatchApplierModule(reactContext)
             // 在这里添加新的模块
             // OtherModule(reactContext),
             // AnotherModule(reactContext)

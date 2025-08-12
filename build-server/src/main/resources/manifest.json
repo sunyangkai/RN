@@ -1,0 +1,19 @@
+{
+  "version": "0.0.11",
+  "updateType": "delta",
+  "fullBundle": {
+    "url": "http://localhost:8095/bundles/0.0.11/index.android.bundle",
+    "hash": "sha256:f2909cb625cc09a788d5de075bd6cb10f2cd3dca1aec02c74a3640e822e891e1",
+    "size": 1567524,
+    "previousHash": "sha256:f2909cb625cc09a788d5de075bd6cb10f2cd3dca1aec02c74a3640e822e891e1"
+  },
+  "deltaUpdate": {
+    "patchUrl": "http://localhost:8095/patches/0.0.10-to-0.0.11.patch",
+    "patchHash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "patchSize": 0,
+    "targetHash": "sha256:f2909cb625cc09a788d5de075bd6cb10f2cd3dca1aec02c74a3640e822e891e1"
+  },
+  "fallback": {
+    "url": "http://localhost:8095/bundles/0.0.11/index.android.bundle"
+  }
+}

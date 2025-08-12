@@ -1,8 +1,10 @@
 import RNFS from 'react-native-fs';
-import { Alert } from 'react-native';
+import { Alert, NativeModules } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNRestart from 'react-native-restart';
 import CryptoJS from 'crypto-js';
+
+const { PatchApplier } = NativeModules;
 
 const MANIFEST_URL = 'http://192.168.2.173:3000/manifest.json'; // 更新文件地址
 const BUNDLE_LOCAL_PATH = `${RNFS.DocumentDirectoryPath}/hotupdate.bundle`; // 本地上一个版本的资源文件
@@ -41,10 +43,86 @@ async function calculateFileHash(filePath) {
 async function applyPatch(oldBundlePath, patchPath, outputPath, manifest) {
   try {
     const patchContent = await RNFS.readFile(patchPath, 'utf8');
-    const patch = JSON.parse(patchContent);
-    if (patch.type !== 'delta_patch') {
-      throw new Error('不支持的补丁类型');
+    
+    // 检测补丁类型
+    let patchType;
+    let patch;
+    
+    try {
+      // 尝试解析为JSON（delta_patch格式）
+      patch = JSON.parse(patchContent);
+      patchType = patch.type || 'delta_patch';
+    } catch (jsonError) {
+      // 如果不是JSON，检查是否为unified diff格式
+      if (patchContent.includes('@@') && (patchContent.includes('---') || patchContent.includes('+++'))) {
+        patchType = 'unified_diff';
+      } else {
+        throw new Error('无法识别的补丁格式');
+      }
     }
+    
+    console.log(`📋 检测到补丁类型: ${patchType}`);
+    
+    if (patchType === 'unified_diff') {
+      // 使用Android原生模块应用unified diff补丁
+      return await applyUnifiedDiffPatch(oldBundlePath, patchContent, outputPath, manifest);
+    } else if (patchType === 'delta_patch') {
+      // 使用现有的delta补丁逻辑
+      return await applyDeltaPatch(oldBundlePath, patch, outputPath);
+    } else {
+      throw new Error(`不支持的补丁类型: ${patchType}`);
+    }
+    
+  } catch (error) {
+    console.error('应用补丁失败:', error);
+    return false;
+  }
+}
+
+// 使用Android原生模块应用unified diff补丁
+async function applyUnifiedDiffPatch(oldBundlePath, patchContent, outputPath, manifest) {
+  try {
+    console.log('🔧 使用原生模块应用unified diff补丁...');
+    
+    // 首先验证补丁格式
+    const validation = await PatchApplier.validatePatchFormat(patchContent);
+    if (!validation.valid) {
+      throw new Error('Unified diff补丁格式无效');
+    }
+    
+    // 计算源文件哈希用于验证
+    const sourceHash = await calculateFileHash(oldBundlePath);
+    
+    // 调用原生模块应用补丁
+    const result = await PatchApplier.applyPatch(oldBundlePath, patchContent, {
+      backup: false, // 我们自己管理备份
+      expectedSourceHash: sourceHash
+    });
+    
+    if (result.success) {
+      console.log(`✅ 原生补丁应用成功! 变更 ${result.changedLines} 行`);
+      console.log(`📊 文件大小: ${result.originalSize} → ${result.patchedSize}`);
+      
+      // 如果需要输出到不同路径，复制文件
+      if (oldBundlePath !== outputPath) {
+        await RNFS.copyFile(oldBundlePath, outputPath);
+      }
+      
+      return true;
+    } else {
+      throw new Error('原生补丁应用失败');
+    }
+    
+  } catch (error) {
+    console.error('Unified diff补丁应用失败:', error);
+    throw error;
+  }
+}
+
+// 现有的delta补丁逻辑（保持兼容性）
+async function applyDeltaPatch(oldBundlePath, patch, outputPath) {
+  try {
+    console.log('🔧 使用delta补丁逻辑...');
     
     let bundleContent = await RNFS.readFile(oldBundlePath, 'utf8');
 
@@ -56,10 +134,10 @@ async function applyPatch(oldBundlePath, patchPath, outputPath, manifest) {
       if (localSourceHash !== patch.sourceHash) {
         throw new Error('源文件哈希验证失败');
       }
-      console.log('源文件哈希验证成功');
+      console.log('✅ 源文件哈希验证成功');
     }
     
-    console.log(`准备应用 ${patch.operations?.length} 个补丁操作`);
+    console.log(`📝 准备应用 ${patch.operations?.length} 个补丁操作`);
     
     const operations = patch.operations || [];
     // 所有操作按位置倒序排序（从大到小），避免操作间相互影响
@@ -92,21 +170,22 @@ async function applyPatch(oldBundlePath, patchPath, outputPath, manifest) {
     // 验证目标文件哈希（如果补丁中提供）
     if (patch.targetHash) {
       const resultHash = 'sha256:' + CryptoJS.SHA256(bundleContent).toString(CryptoJS.enc.Hex);
-      console.log('文件大小:', bundleContent.length);
+      console.log('📏 文件大小:', bundleContent.length);
       if (resultHash !== patch.targetHash) {
         console.log('期望哈希:', patch.targetHash);
         console.log('实际哈希:', resultHash);
         throw new Error('目标文件哈希验证失败');
       }
-      console.log('目标文件哈希验证成功');
+      console.log('✅ 目标文件哈希验证成功');
     }
     
     await RNFS.writeFile(outputPath, bundleContent, 'utf8');
-    console.log('补丁应用成功');
+    console.log('✅ Delta补丁应用成功');
     return true;
+    
   } catch (error) {
-    console.error('应用补丁失败:', error);
-    return false;
+    console.error('Delta补丁应用失败:', error);
+    throw error;
   }
 }
 

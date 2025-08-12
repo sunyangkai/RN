@@ -1,6 +1,6 @@
 {
   "name": "demo",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -17,6 +17,7 @@
     "@react-native/new-app-screen": "0.80.1",
     "@react-navigation/bottom-tabs": "^7.4.2",
     "@react-navigation/native": "^7.1.16",
+    "axios": "^1.11.0",
     "crypto-js": "^4.2.0",
     "diff": "^8.0.2",
     "react": "19.1.0",

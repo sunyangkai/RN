@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { generatePatch, calculateHash } = require('./patch-generator');
+const axios = require('axios');
+const CryptoJS = require('crypto-js');
 
 /**
  * 构建脚本工具
@@ -14,8 +15,82 @@ const CONFIG = {
   MANIFEST_PATH: './cdn-mock/manifest.json',
   BUNDLE_FILE: 'index.android.bundle',
   ASSETS_DIR: './cdn-mock/assets',
-  SERVER_BASE_URL: 'http://192.168.2.173:3000'
+  JAVA_SERVICE_URL: 'http://localhost:8082', // Java服务端地址
+  SERVER_BASE_URL: 'http://localhost:8082'   // 客户端访问地址（同Java服务）
 };
+
+// 计算文件哈希（与Java服务端保持一致）
+function calculateHash(content) {
+  return 'sha256:' + CryptoJS.SHA256(content).toString(CryptoJS.enc.Hex);
+}
+
+// 启动Java服务端
+async function startJavaService() {
+  console.log('🚀 启动Java服务端...');
+  const { spawn } = require('child_process');
+  
+  const javaProcess = spawn('java', [
+    '-jar',
+    './build-server/target/diff-service-client-1.0.0.jar',
+    '8082'
+  ], {
+    cwd: __dirname,
+    stdio: ['pipe', 'pipe', 'pipe']
+  });
+  
+  javaProcess.stdout.on('data', (data) => {
+    console.log(`[Java] ${data.toString().trim()}`);
+  });
+  
+  javaProcess.stderr.on('data', (data) => {
+    console.error(`[Java Error] ${data.toString().trim()}`);
+  });
+  
+  // 等待服务启动
+  await new Promise((resolve, reject) => {
+    const checkService = async () => {
+      try {
+        await axios.get(`${CONFIG.JAVA_SERVICE_URL}/health`, { timeout: 1000 });
+        console.log('✅ Java服务启动成功');
+        resolve();
+      } catch (error) {
+        setTimeout(checkService, 1000);
+      }
+    };
+    
+    setTimeout(() => reject(new Error('Java服务启动超时')), 30000);
+    setTimeout(checkService, 2000); // 给服务2秒启动时间
+  });
+  
+  return javaProcess;
+}
+
+// 调用Java服务生成补丁
+async function generatePatchViaJavaService(oldBundlePath, newBundlePath, outputDir) {
+  try {
+    console.log('🔧 调用Java服务生成补丁...');
+    
+    const response = await axios.post(`${CONFIG.JAVA_SERVICE_URL}/api/diff/generate-patch`, {
+      oldFile: path.resolve(oldBundlePath).replace(/\\/g, '/'),
+      newFile: path.resolve(newBundlePath).replace(/\\/g, '/'),
+      outputDir: path.resolve(outputDir).replace(/\\/g, '/')
+    }, {
+      timeout: 60000, // 60秒超时
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    return response.data;
+    
+  } catch (error) {
+    if (error.response) {
+      throw new Error(`Java服务错误: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+    } else if (error.request) {
+      throw new Error('Java服务无响应');
+    } else {
+      throw new Error(`请求失败: ${error.message}`);
+    }
+  }
+}
 
 
 function ensureDir(dirPath) {
@@ -135,9 +210,20 @@ async function buildMockPath() {
       throw new Error('新版本bundle不存在');
     }
     
-    // 生成补丁
-    console.log('生成补丁文件...');
-    const patchResult = await generatePatch(oldBundlePath, newBundlePath, CONFIG.PATCHES_DIR);
+    // 启动Java服务
+    const javaProcess = await startJavaService();
+    
+    let patchResult;
+    try {
+      // 生成补丁
+      console.log('生成补丁文件...');
+      patchResult = await generatePatchViaJavaService(oldBundlePath, newBundlePath, CONFIG.PATCHES_DIR);
+    } finally {
+      // 确保Java服务关闭
+      if (javaProcess) {
+        javaProcess.kill();
+      }
+    }
     
     if (!patchResult.success) {
       if (patchResult.reason === 'patch_too_large') {

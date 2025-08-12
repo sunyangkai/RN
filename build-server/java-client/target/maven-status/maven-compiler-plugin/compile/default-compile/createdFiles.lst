@@ -1,7 +1,0 @@
-com\demo\DiffServiceClient$VersionHandler.class
-com\demo\DiffServiceClient$GeneratePatchHandler.class
-com\demo\DiffServiceClient.class
-com\demo\DiffServiceClient$JsonBuilder.class
-com\demo\DiffServiceClient$JsonBuilder$Consumer.class
-com\demo\DiffServiceClient$HealthHandler.class
-com\demo\DiffServiceClient$PatchResult.class
