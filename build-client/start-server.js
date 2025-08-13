@@ -13,9 +13,9 @@ async function startServer() {
   
   try {
     await server.start();
-    console.log(`🚀 静态服务器已启动，端口: ${port}`);
-    console.log(`📁 服务目录: ./build`);
-    console.log(`🌐 访问地址:`);
+    console.log(`[START] 静态服务器已启动，端口: ${port}`);
+    console.log(`[PATH] 服务目录: ./build`);
+    console.log(`[URL] 访问地址:`);
     console.log(`   健康检查: http://localhost:${port}/health`);
     console.log(`   版本信息: http://localhost:${port}/version`);
     console.log(`   清单文件: http://localhost:${port}/manifest.json`);
@@ -35,9 +35,9 @@ async function startServer() {
     });
     
   } catch (error) {
-    console.error('❌ 服务器启动失败:', error.message);
+    console.error('[ERROR] 服务器启动失败:', error.message);
     if (error.code === 'EADDRINUSE') {
-      console.log(`💡 端口 ${port} 被占用，请尝试其他端口：`);
+      console.log(`[INFO] 端口 ${port} 被占用，请尝试其他端口：`);
       console.log(`   node start-server.js 8082`);
     }
     process.exit(1);

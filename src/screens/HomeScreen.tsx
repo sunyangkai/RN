@@ -6,7 +6,7 @@ const HomeScreen = () => {
   const goNetProcecss = () => {
     navigate('我的', {})
   }
-  console.log('Homereen');
+  console.log('sdf123213sad');
   return (
     <View style={styles.container}>
        <ImageBackground 

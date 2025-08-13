@@ -26,7 +26,7 @@ class DiffService {
 
         const command = `java -jar "${this.jarPath}" "${args.join('" "')}"`;
         
-        console.log('🔧 执行diff命令:', command);
+        // console.log('[BUILD] 执行diff命令:', command);
 
         // 执行Java命令
         const stdout = execSync(command, {
@@ -38,17 +38,17 @@ class DiffService {
         const result = JSON.parse(stdout.trim());
         
         if (result.success) {
-          console.log('✅ Diff补丁生成成功');
-          console.log(`📊 补丁大小: ${result.stats.patchSize} 字符`);
-          console.log(`📈 大小比例: ${(result.stats.sizeRatio * 100).toFixed(1)}%`);
+          console.log('[OK] Diff补丁生成成功');
+          console.log(`[SIZE] 补丁大小: ${result.stats.patchSize} 字符`);
+          console.log(`[RATIO] 大小比例: ${(result.stats.sizeRatio * 100).toFixed(1)}%`);
         } else {
-          console.log('❌ Diff补丁生成失败:', result.reason || result.error);
+          console.log('[ERROR] Diff补丁生成失败:', result.reason || result.error);
         }
 
         resolve(result);
 
       } catch (error) {
-        console.error('❌ Diff服务调用失败:', error.message);
+        console.error('[ERROR] Diff服务调用失败:', error.message);
         
         // 尝试解析错误输出中的JSON
         if (error.stdout) {

@@ -190,10 +190,12 @@ async function applyDeltaPatch(oldBundlePath, patch, outputPath) {
 
 export async function checkAndUpdateBundle() {
   try {
-    console.log('🔍 检查热更新...', MANIFEST_URL);
+    console.log('检查热更新...');
     const res = await fetch(MANIFEST_URL);
+    console.log('获取manifest:', res, `url: ${MANIFEST_URL}`);
     const manifest = await res.json();
     const currentVersion = await AsyncStorage.getItem(VERSION_KEY);
+    console.log('当前版本:', currentVersion, '最新版本:', manifest.version);
 
     if (manifest.version !== currentVersion) {
       await cleanupTempFiles();
@@ -202,13 +204,16 @@ export async function checkAndUpdateBundle() {
           manifest.deltaUpdate && 
           currentVersion && 
           await RNFS.exists(BUNDLE_LOCAL_PATH)) {
-        
+        console.log('开始差量更新...');
+
         const deltaInfo = manifest.deltaUpdate;        
         try {
           const patchDownloadResult = await RNFS.downloadFile({ fromUrl: deltaInfo.patchUrl, toFile: PATCH_TEMP_PATH }).promise;
+          console.log('下载补丁文件:', patchDownloadResult);
           if (patchDownloadResult.statusCode === 200) {
             const patchHash = await calculateFileHash(PATCH_TEMP_PATH); 
             if (patchHash === deltaInfo.patchHash) {
+              console.log('补丁文件哈希验证成功, 开始应用补丁');
               const patchSuccess = await applyPatch(
                 BUNDLE_LOCAL_PATH, 
                 PATCH_TEMP_PATH, 
@@ -217,10 +222,9 @@ export async function checkAndUpdateBundle() {
               );
               
               if (patchSuccess) {
-                // 验证结果文件哈希
                 const resultHash = await calculateFileHash(BUNDLE_TEMP_PATH);
                 if (resultHash === deltaInfo.targetHash) {
-                  // 原子性替换
+                  console.log('差量更新结果哈希验证成功，开始原子性替换');
                   await RNFS.moveFile(BUNDLE_TEMP_PATH, BUNDLE_LOCAL_PATH);
                   await AsyncStorage.setItem(VERSION_KEY, manifest.version);
                   console.log('差量更新完成！');
@@ -231,16 +235,16 @@ export async function checkAndUpdateBundle() {
                   console.error('差量更新结果哈希验证失败，回退到完整下载');
                 }
               } else {
-                console.error('应用补丁失败，回退到完整下载');
+                console.error('应用补丁失败');
               }
             } else {
-              console.error('补丁文件哈希验证失败，回退到完整下载', patchHash, deltaInfo.patchHash);
+              console.error('补丁文件哈希验证失败');
             }
           } else {
-            console.error('补丁下载失败，回退到完整下载');
+            console.error('补丁下载失败');
           }
         } catch (error) {
-          console.error('差量更新失败，回退到完整下载:', error);
+          console.error('差量更新失败', error);
         }
       }
       
@@ -266,18 +270,18 @@ export async function checkAndUpdateBundle() {
         // 原子性替换
         await RNFS.moveFile(BUNDLE_TEMP_PATH, BUNDLE_LOCAL_PATH);
         await AsyncStorage.setItem(VERSION_KEY, manifest.version);
-        console.log('🔥 完整更新完成');
+        console.log('完整更新完成');
         
         showUpdateAlert();
       } else {
-        console.warn('❌ 完整下载失败');
+        console.warn('完整下载失败');
         await cleanupTempFiles();
       }
     } else {
-      console.log('✅ 已是最新版本');
+      console.log('已是最新版本');
     }
   } catch (err) {
-    console.error('🔥 热更新失败', err);
+    console.error('热更新失败', err);
     await cleanupTempFiles();
   }
 }

@@ -35,28 +35,28 @@ async function handleServiceCommand(options) {
   switch (action) {
     case 'status':
       const diffService = new DiffService();
-      console.log(`Diff服务状态: ${diffService.isAvailable() ? '🟢 可用' : '🔴 不可用'}`);
-      console.log(`静态服务器状态: ${staticServer ? '🟢 运行中' : '🔴 未运行'}`);
+      console.log(`Diff服务状态: ${diffService.isAvailable() ? '[OK] 可用' : '[ERROR] 不可用'}`);
+      console.log(`静态服务器状态: ${staticServer ? '[OK] 运行中' : '[ERROR] 未运行'}`);
       break;
     case 'stop':
-      console.log('💡 Diff服务为命令行工具，无需停止');
+      console.log('[INFO] Diff服务为命令行工具，无需停止');
       if (staticServer) {
         await staticServer.stop();
         staticServer = null;
-        console.log('🛑 静态服务器已停止');
+        console.log('[STOP] 静态服务器已停止');
       }
       break;
     case 'start-static':
       if (staticServer) {
         console.log('静态服务器已在运行中');
       } else {
-        const port = options.port || 8081;
+        const port = options.port || 8040;
         staticServer = new StaticServer(port);
         try {
           await staticServer.start();
-          console.log(`🚀 静态服务器已启动，端口: ${port}`);
+          console.log(`[START] 静态服务器已启动，端口: ${port}`);
         } catch (error) {
-          console.error('❌ 静态服务器启动失败:', error.message);
+          console.error('[ERROR] 静态服务器启动失败:', error.message);
           staticServer = null;
         }
       }
@@ -65,7 +65,7 @@ async function handleServiceCommand(options) {
       if (staticServer) {
         await staticServer.stop();
         staticServer = null;
-        console.log('🛑 静态服务器已停止');
+        console.log('[STOP] 静态服务器已停止');
       } else {
         console.log('静态服务器未运行');
       }
