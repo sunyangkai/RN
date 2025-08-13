@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 const { buildBundle, buildPatch, buildOTA } = require('./src/build');
-const javaServiceManager = require('./src/services/java-service-manager');
+const DiffService = require('./src/services/diff-service');
+const StaticServer = require('./src/services/static-server');
 
 /**
  * 构建客户端命令行入口
@@ -24,22 +25,57 @@ function parseArgs() {
   return { command, options };
 }
 
+// 静态服务器实例
+let staticServer = null;
+
 // 服务管理命令处理
 async function handleServiceCommand(options) {
   const action = options.action || process.argv[3];
   
   switch (action) {
     case 'status':
-      console.log(`Java服务状态: ${javaServiceManager.isRunning() ? '🟢 运行中' : '🔴 未运行'}`);
+      const diffService = new DiffService();
+      console.log(`Diff服务状态: ${diffService.isAvailable() ? '🟢 可用' : '🔴 不可用'}`);
+      console.log(`静态服务器状态: ${staticServer ? '🟢 运行中' : '🔴 未运行'}`);
       break;
     case 'stop':
-      javaServiceManager.stop();
-      console.log('🛑 Java服务已停止');
+      console.log('💡 Diff服务为命令行工具，无需停止');
+      if (staticServer) {
+        await staticServer.stop();
+        staticServer = null;
+        console.log('🛑 静态服务器已停止');
+      }
+      break;
+    case 'start-static':
+      if (staticServer) {
+        console.log('静态服务器已在运行中');
+      } else {
+        const port = options.port || 8081;
+        staticServer = new StaticServer(port);
+        try {
+          await staticServer.start();
+          console.log(`🚀 静态服务器已启动，端口: ${port}`);
+        } catch (error) {
+          console.error('❌ 静态服务器启动失败:', error.message);
+          staticServer = null;
+        }
+      }
+      break;
+    case 'stop-static':
+      if (staticServer) {
+        await staticServer.stop();
+        staticServer = null;
+        console.log('🛑 静态服务器已停止');
+      } else {
+        console.log('静态服务器未运行');
+      }
       break;
     default:
       console.log('可用的服务命令:');
-      console.log('  status  # 查看服务状态');
-      console.log('  stop    # 停止服务');
+      console.log('  status        # 查看服务状态');
+      console.log('  stop          # 停止所有服务');
+      console.log('  start-static  # 启动静态服务器');
+      console.log('  stop-static   # 停止静态服务器');
       break;
   }
 }
@@ -57,10 +93,12 @@ if (require.main === module) {
       break;
     default:
       console.log('🛠️  构建客户端使用方式:');
-      console.log('  node index.js build-OTA              # 构建全量包');
-      console.log('  node index.js build-OTA type=patch   # 构建差量包');
-      console.log('  node index.js service status         # 查看Java服务状态');
-      console.log('  node index.js service stop           # 停止Java服务');
+      console.log('  node index.js build-OTA                # 构建全量包');
+      console.log('  node index.js build-OTA type=patch     # 构建差量包');
+      console.log('  node index.js service status           # 查看服务状态');
+      console.log('  node index.js service stop             # 停止所有服务');
+      console.log('  node index.js service start-static     # 启动静态服务器');
+      console.log('  node index.js service stop-static      # 停止静态服务器');
       break;
   }
 }

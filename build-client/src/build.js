@@ -2,15 +2,70 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const { ensureDir, getVersion } = require('./utils/file-utils');
+const { ensureDir, getVersion, readJsonFile, writeJsonFile } = require('./utils/file-utils');
 const { calculateHash } = require('./utils/hash-utils');
 const CONFIG = require('./utils/config');
-const javaServiceManager = require('./services/java-service-manager');
-const ManifestService = require('./services/manifest-service');
+const DiffService = require('./services/diff-service');
 
 /**
  * 核心构建逻辑
  */
+
+/**
+ * 获取manifest文件
+ */
+function getManifest() {
+  const manifest = readJsonFile(CONFIG.MANIFEST_PATH);
+  
+  if (manifest) {
+    return manifest;
+  }
+  
+  // 默认manifest结构
+  return {
+    version: getVersion(),
+    updateType: "delta",
+    fullBundle: {
+      url: "",
+      hash: "",
+      size: 0
+    },
+    deltaUpdate: null,
+  };
+}
+
+/**
+ * 更新manifest文件
+ */
+function updateManifest(manifestData) {
+  writeJsonFile(CONFIG.MANIFEST_PATH, manifestData);
+  console.log('📝 Manifest已更新');
+}
+
+/**
+ * 创建更新manifest
+ */
+function createUpdateManifest(currentVersion, previousVersion, bundleInfo, patchInfo) {
+  return {
+    version: currentVersion,
+    updateType: "delta",
+    fullBundle: {
+      url: `${CONFIG.SERVER_BASE_URL}/bundles/${currentVersion}/${CONFIG.BUNDLE_FILE}`,
+      hash: bundleInfo.hash,
+      size: bundleInfo.size,
+      previousHash: bundleInfo.previousHash
+    },
+    deltaUpdate: {
+      patchUrl: `${CONFIG.SERVER_BASE_URL}/patches/${previousVersion}-to-${currentVersion}.patch`,
+      patchHash: patchInfo.hash,
+      patchSize: patchInfo.size,
+      targetHash: bundleInfo.hash
+    },
+    fallback: {
+      url: `${CONFIG.SERVER_BASE_URL}/bundles/${currentVersion}/${CONFIG.BUNDLE_FILE}`
+    }
+  };
+}
 
 /**
  * 构建Bundle包
@@ -29,11 +84,11 @@ async function buildBundle() {
     
     // 执行React Native打包
     console.log('执行React Native打包...');
-    const tempBundlePath = path.resolve('..', CONFIG.BUILD_DIR, CONFIG.BUNDLE_FILE);
-    const assetsPath = path.resolve('..', CONFIG.ASSETS_DIR);
+    const tempBundlePath = path.resolve('.', CONFIG.BUILD_DIR, CONFIG.BUNDLE_FILE);
+    const assetsPath = path.resolve('.', CONFIG.ASSETS_DIR);
     execSync(`npx react-native bundle --entry-file index.js --platform android --dev false --bundle-output "${tempBundlePath}" --assets-dest "${assetsPath}/"`, {
       stdio: 'inherit',
-      cwd: '..' // 在项目根目录执行
+      cwd: '.' // 在当前目录执行
     });
     
     // 复制bundle到版本目录
@@ -74,8 +129,7 @@ async function buildPatch() {
     console.log(`📦 更新版本: ${currentVersion}`);
     ensureDir(CONFIG.PATCHES_DIR);
     
-    const manifestService = new ManifestService();
-    const manifest = manifestService.getManifest();
+    const manifest = getManifest();
     const previousVersion = manifest.version;
     
     if (previousVersion === currentVersion) {
@@ -98,9 +152,10 @@ async function buildPatch() {
       throw new Error('新版本bundle不存在');
     }
     
-    // 使用共享的Java服务生成补丁
-    console.log('🔧 使用共享Java服务生成补丁...');
-    const patchResult = await javaServiceManager.generatePatch(oldBundlePath, newBundlePath, CONFIG.PATCHES_DIR);
+    // 使用diff服务生成补丁
+    console.log('🔧 使用diff服务生成补丁...');
+    const diffService = new DiffService();
+    const patchResult = await diffService.generatePatch(oldBundlePath, newBundlePath, CONFIG.PATCHES_DIR);
     
     if (!patchResult.success) {
       if (patchResult.reason === 'patch_too_large') {
@@ -129,7 +184,7 @@ async function buildPatch() {
     const previousHash = calculateHash(oldBundleContent);
     
     // 更新manifest
-    const updatedManifest = manifestService.createUpdateManifest(
+    const updatedManifest = createUpdateManifest(
       currentVersion,
       previousVersion,
       {
@@ -143,7 +198,7 @@ async function buildPatch() {
       }
     );
     
-    manifestService.updateManifest(updatedManifest);
+    updateManifest(updatedManifest);
     
     console.log('✅ 补丁包生成完成！');
     console.log(`📊 补丁大小: ${patchResult.stats.patchSize} 字符`);

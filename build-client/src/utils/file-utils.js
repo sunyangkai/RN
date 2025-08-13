@@ -27,7 +27,7 @@ function writeJsonFile(filePath, data) {
 
 // 获取版本号（从项目根目录读取）
 function getVersion() {
-  const packageJson = readJsonFile('../package.json');
+  const packageJson = readJsonFile('./package.json');
   return packageJson ? packageJson.version : '1.0.0';
 }
 

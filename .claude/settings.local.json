@@ -9,7 +9,9 @@
       "Bash(adb devices)",
       "Bash(npm run android)",
       "Bash(curl -s http://localhost:8082/manifest.json)",
-      "Bash(curl -s http://localhost:8083/manifest.json)"
+      "Bash(curl -s http://localhost:8083/manifest.json)",
+      "Bash(rm \"C:\\Users\\Administrator\\sunyk\\demo\\static-server.js\")",
+      "Bash(rm \"C:\\Users\\Administrator\\sunyk\\demo\\start-static-server.js\")"
     ],
     "deny": [],
     "ask": []
