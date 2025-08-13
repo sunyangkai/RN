@@ -1,10 +1,7 @@
-/**
- * 热更新配置管理
- */
 
 // 服务器域名配置
 const SERVER_DOMAINS = {
-  DEV: 'http://localhost:8040',
+  DEV: 'http://192.168.2.173:8040', // 本地不要用localhost，Android模拟器无法访问!!
   PROD: 'https://your-production-server.com'
 };
 

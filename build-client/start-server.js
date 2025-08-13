@@ -7,7 +7,7 @@ const StaticServer = require('./static-server');
  */
 
 async function startServer() {
-  const port = process.argv[2] ? parseInt(process.argv[2]) : 8081;
+  const port = process.argv[2] ? parseInt(process.argv[2]) : 8040;
   
   const server = new StaticServer(port);
   

@@ -195,9 +195,6 @@ export async function checkAndUpdateBundle() {
     const manifest = await res.json();
     const currentVersion = await AsyncStorage.getItem(VERSION_KEY);
 
-    console.log('manifest', manifest);
-    console.log('currentVersion', currentVersion);
-    
     if (manifest.version !== currentVersion) {
       await cleanupTempFiles();
 
@@ -208,16 +205,10 @@ export async function checkAndUpdateBundle() {
         
         const deltaInfo = manifest.deltaUpdate;        
         try {
-          const patchDownloadResult = await RNFS.downloadFile({
-            fromUrl: deltaInfo.patchUrl,
-            toFile: PATCH_TEMP_PATH,
-          }).promise;
+          const patchDownloadResult = await RNFS.downloadFile({ fromUrl: deltaInfo.patchUrl, toFile: PATCH_TEMP_PATH }).promise;
           if (patchDownloadResult.statusCode === 200) {
             const patchHash = await calculateFileHash(PATCH_TEMP_PATH); 
             if (patchHash === deltaInfo.patchHash) {
-              
-              // 应用补丁
-              // 
               const patchSuccess = await applyPatch(
                 BUNDLE_LOCAL_PATH, 
                 PATCH_TEMP_PATH, 
@@ -253,7 +244,6 @@ export async function checkAndUpdateBundle() {
         }
       }
       
-      // 完整下载（回退方案）
       console.log('📦 执行完整下载...');
       const downloadUrl = manifest.fullBundle?.url;
       

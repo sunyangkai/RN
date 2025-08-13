@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 /**
  * 文件操作工具类
@@ -31,9 +32,43 @@ function getVersion() {
   return packageJson ? packageJson.version : '1.0.0';
 }
 
+/**
+ * 获取本地IP地址
+ */
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  
+  // 优先查找以太网接口
+  for (const name of Object.keys(interfaces)) {
+    const iface = interfaces[name];
+    for (const alias of iface) {
+      if (alias.family === 'IPv4' && !alias.internal) {
+        // 优先返回192.168.x.x或10.x.x.x网段的IP
+        if (alias.address.startsWith('192.168.') || alias.address.startsWith('10.')) {
+          return alias.address;
+        }
+      }
+    }
+  }
+  
+  // 如果没找到内网IP，返回第一个非内部IPv4地址
+  for (const name of Object.keys(interfaces)) {
+    const iface = interfaces[name];
+    for (const alias of iface) {
+      if (alias.family === 'IPv4' && !alias.internal) {
+        return alias.address;
+      }
+    }
+  }
+  
+  // 最后兜底返回localhost
+  return 'localhost';
+}
+
 module.exports = {
   ensureDir,
   readJsonFile,
   writeJsonFile,
-  getVersion
+  getVersion,
+  getLocalIP
 };
