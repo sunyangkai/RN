@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const StaticServer = require('./src/services/static-server');
+const StaticServer = require('./static-server');
 
 /**
  * 独立启动静态服务器的脚本

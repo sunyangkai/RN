@@ -10,9 +10,6 @@ const CONFIG = {
   MANIFEST_PATH: './build/manifest.json',
   ASSETS_DIR: './build/assets',
   
-  // 原cdn-mock目录（保留兼容性）
-  CDN_MOCK_DIR: './cdn-mock',
-  
   BUNDLE_FILE: 'index.android.bundle',
   SERVER_BASE_URL: 'http://localhost:8040'  // 客户端访问地址
 };

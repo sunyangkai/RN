@@ -2,10 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const { ensureDir, getVersion, readJsonFile, writeJsonFile } = require('./utils/file-utils');
-const { calculateHash } = require('./utils/hash-utils');
-const CONFIG = require('./utils/config');
-const DiffService = require('./services/diff-service');
+const { ensureDir, getVersion, readJsonFile, writeJsonFile } = require('./file-utils');
+const { calculateHash } = require('./hash-utils');
+const CONFIG = require('./config');
+const DiffService = require('./diff-service');
 
 /**
  * 核心构建逻辑
@@ -43,28 +43,39 @@ function updateManifest(manifestData) {
 }
 
 /**
- * 创建更新manifest
+ * 创建更新manifest（统一处理全量和差量）
+ * @param {Object} result - 构建结果对象，包含version, bundleInfo, patchInfo?, previousVersion?
  */
-function createUpdateManifest(currentVersion, previousVersion, bundleInfo, patchInfo) {
-  return {
-    version: currentVersion,
-    updateType: "delta",
+function createUpdateManifest(result) {
+  const { version, bundleInfo, patchInfo, previousVersion } = result;
+  
+  const manifest = {
+    version: version,
+    updateType: patchInfo ? "delta" : "full",
     fullBundle: {
-      url: `${CONFIG.SERVER_BASE_URL}/bundles/${currentVersion}/${CONFIG.BUNDLE_FILE}`,
+      url: `${CONFIG.SERVER_BASE_URL}/bundles/${version}/${CONFIG.BUNDLE_FILE}`,
       hash: bundleInfo.hash,
-      size: bundleInfo.size,
-      previousHash: bundleInfo.previousHash
+      size: bundleInfo.size
     },
-    deltaUpdate: {
-      patchUrl: `${CONFIG.SERVER_BASE_URL}/patches/${previousVersion}-to-${currentVersion}.patch`,
+    fallback: {
+      url: `${CONFIG.SERVER_BASE_URL}/bundles/${version}/${CONFIG.BUNDLE_FILE}`
+    }
+  };
+
+  // 如果有补丁信息，则添加差量更新和previousHash
+  if (patchInfo && previousVersion) {
+    manifest.fullBundle.previousHash = bundleInfo.previousHash;
+    manifest.deltaUpdate = {
+      patchUrl: `${CONFIG.SERVER_BASE_URL}/patches/${previousVersion}-to-${version}.patch`,
       patchHash: patchInfo.hash,
       patchSize: patchInfo.size,
       targetHash: bundleInfo.hash
-    },
-    fallback: {
-      url: `${CONFIG.SERVER_BASE_URL}/bundles/${currentVersion}/${CONFIG.BUNDLE_FILE}`
-    }
-  };
+    };
+  } else {
+    manifest.deltaUpdate = null;
+  }
+
+  return manifest;
 }
 
 /**
@@ -82,18 +93,14 @@ async function buildBundle() {
     ensureDir(CONFIG.ASSETS_DIR);
     ensureDir(path.join(CONFIG.BUNDLES_DIR, version));
     
-    // 执行React Native打包
+    // 执行React Native打包，直接输出到版本目录
     console.log('执行React Native打包...');
-    const tempBundlePath = path.resolve('.', CONFIG.BUILD_DIR, CONFIG.BUNDLE_FILE);
+    const versionBundlePath = path.join(CONFIG.BUNDLES_DIR, version, CONFIG.BUNDLE_FILE);
     const assetsPath = path.resolve('.', CONFIG.ASSETS_DIR);
-    execSync(`npx react-native bundle --entry-file index.js --platform android --dev false --bundle-output "${tempBundlePath}" --assets-dest "${assetsPath}/"`, {
+    execSync(`npx react-native bundle --entry-file index.js --platform android --dev false --bundle-output "${versionBundlePath}" --assets-dest "${assetsPath}/"`, {
       stdio: 'inherit',
       cwd: '.' // 在当前目录执行
     });
-    
-    // 复制bundle到版本目录
-    const versionBundlePath = path.join(CONFIG.BUNDLES_DIR, version, CONFIG.BUNDLE_FILE);
-    fs.copyFileSync(tempBundlePath, versionBundlePath);
     
     // 计算文件大小和哈希
     const bundleContent = fs.readFileSync(versionBundlePath, 'utf8');
@@ -108,8 +115,10 @@ async function buildBundle() {
     return {
       version,
       bundlePath: versionBundlePath,
-      size: bundleSize,
-      hash: bundleHash
+      bundleInfo: {
+        hash: bundleHash,
+        size: bundleSize
+      }
     };
     
   } catch (error) {
@@ -132,6 +141,7 @@ async function buildPatch() {
     const manifest = getManifest();
     const previousVersion = manifest.version;
     
+    console.log(previousVersion, currentVersion)
     if (previousVersion === currentVersion) {
       console.log('版本未变化，无需生成补丁');
       return;
@@ -183,31 +193,24 @@ async function buildPatch() {
     const oldBundleContent = fs.readFileSync(oldBundlePath, 'utf8');
     const previousHash = calculateHash(oldBundleContent);
     
-    // 更新manifest
-    const updatedManifest = createUpdateManifest(
-      currentVersion,
-      previousVersion,
-      {
-        hash: newBundleHash,
-        size: newBundleSize,
-        previousHash: previousHash
-      },
-      {
-        hash: patchHash,
-        size: patchResult.stats.patchSize
-      }
-    );
-    
-    updateManifest(updatedManifest);
-    
     console.log('✅ 补丁包生成完成！');
     console.log(`📊 补丁大小: ${patchResult.stats.patchSize} 字符`);
     console.log(`📈 大小比例: ${(patchResult.stats.sizeRatio * 100).toFixed(1)}%`);
     console.log(`🔧 操作数量: ${patchResult.stats.operationsCount}`);
     
     return {
+      version: currentVersion,
+      previousVersion,
       patchPath: finalPatchPath,
-      manifest: updatedManifest,
+      bundleInfo: {
+        hash: newBundleHash,
+        size: newBundleSize,
+        previousHash: previousHash
+      },
+      patchInfo: {
+        hash: patchHash,
+        size: patchResult.stats.patchSize
+      },
       stats: patchResult.stats
     };
     
@@ -242,6 +245,12 @@ async function buildOTA(options = {}) {
         console.log(`🔧 补丁: ${patchResult.patchPath}`);
         console.log(`📊 补丁大小: ${patchResult.stats.patchSize} 字符`);
         console.log(`📈 大小比例: ${(patchResult.stats.sizeRatio * 100).toFixed(1)}%`);
+        
+        // 生成差量包manifest
+        const updatedManifest = createUpdateManifest(patchResult);
+        
+        updateManifest(updatedManifest);
+        console.log(`📝 Manifest已更新`);
       }
       
       return {
@@ -255,10 +264,16 @@ async function buildOTA(options = {}) {
       
       const buildResult = await buildBundle();
       
+      // 生成全量包manifest
+      const fullBundleManifest = createUpdateManifest(buildResult);
+      
+      updateManifest(fullBundleManifest);
+      
       console.log('\n🎉 全量包构建完成！');
       console.log(`📦 版本: ${buildResult.version}`);
       console.log(`📁 Bundle: ${buildResult.bundlePath}`);
-      console.log(`📊 文件大小: ${buildResult.size} 字符`);
+      console.log(`📊 文件大小: ${buildResult.bundleInfo.size} 字符`);
+      console.log(`📝 Manifest已生成`);
       
       return {
         type: 'full',

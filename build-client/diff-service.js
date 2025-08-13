@@ -4,7 +4,7 @@ const fs = require('fs');
 
 class DiffService {
   constructor() {
-    this.jarPath = path.resolve('..', 'build-server', 'target', 'diff-service-1.0.0.jar');
+    this.jarPath = path.resolve('.', 'build-server', 'target', 'diff-service-1.0.0.jar');
   }
 
   async generatePatch(oldFilePath, newFilePath, outputDir) {

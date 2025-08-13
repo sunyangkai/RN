@@ -11,7 +11,8 @@
       "Bash(curl -s http://localhost:8082/manifest.json)",
       "Bash(curl -s http://localhost:8083/manifest.json)",
       "Bash(rm \"C:\\Users\\Administrator\\sunyk\\demo\\static-server.js\")",
-      "Bash(rm \"C:\\Users\\Administrator\\sunyk\\demo\\start-static-server.js\")"
+      "Bash(rm \"C:\\Users\\Administrator\\sunyk\\demo\\start-static-server.js\")",
+      "Bash(mv \"C:\\Users\\Administrator\\sunyk\\demo\\build-client\\src\\services\\diff-service.js\" \"C:\\Users\\Administrator\\sunyk\\demo\\build-client\\diff-service.js\")"
     ],
     "deny": [],
     "ask": []

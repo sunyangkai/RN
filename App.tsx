@@ -12,12 +12,6 @@ import HomeScreen from './src/screens/HomeScreen';
 import MessagesScreen from './src/screens/MessageScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 
-const theme = {
-  fonts: {
-    regular: { fontFamily: "PingFang SC"},
-  },
-};
-
 
 // 创建一个底部 Tab 导航器实例
 const Tab = createBottomTabNavigator();

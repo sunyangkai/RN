@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-const { buildBundle, buildPatch, buildOTA } = require('./src/build');
-const DiffService = require('./src/services/diff-service');
-const StaticServer = require('./src/services/static-server');
+const { buildBundle, buildPatch, buildOTA } = require('./build');
+const DiffService = require('./diff-service');
+const StaticServer = require('./static-server');
 
 /**
  * 构建客户端命令行入口
