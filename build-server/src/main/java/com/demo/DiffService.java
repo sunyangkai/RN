@@ -3,6 +3,8 @@ package com.demo;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.UnifiedDiffUtils;
 import com.github.difflib.patch.Patch;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -17,6 +19,7 @@ import java.util.stream.Collectors;
 public class DiffService {
     
     private static final double PATCH_SIZE_THRESHOLD = 5.0;
+    private static final Gson gson = new GsonBuilder().create();
     
     public static void main(String[] args) {
         if (args.length < 2) {
@@ -32,7 +35,7 @@ public class DiffService {
             PatchResult result = generateDiffPatch(oldFile, newFile, outputFile);
             
             // 输出JSON结果到stdout
-            String jsonOutput = buildJsonResponse(result);
+            String jsonOutput = gson.toJson(result);
             System.out.println(jsonOutput);
             
             if (!result.success) {
@@ -41,10 +44,10 @@ public class DiffService {
             
         } catch (Exception e) {
             // 输出错误JSON到stdout
-            JsonBuilder json = new JsonBuilder();
-            json.add("success", false);
-            json.add("error", e.getMessage());
-            System.out.println(json.build());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", e.getMessage());
+            System.out.println(gson.toJson(errorResponse));
             System.exit(1);
         }
     }
@@ -110,39 +113,6 @@ public class DiffService {
         return "sha256:" + hexString.toString();
     }
     
-    private static String buildJsonResponse(PatchResult result) {
-        JsonBuilder json = new JsonBuilder();
-        json.add("success", result.success);
-        
-        if (result.success) {
-            json.addIfNotNull("patchFilePath", result.patchFilePath);
-            json.addIfNotNull("patchContent", result.patchContent);
-            json.add("sourceHash", result.sourceHash);
-            json.add("targetHash", result.targetHash);
-            json.addObject("stats", stats -> {
-                stats.add("oldSize", result.oldSize);
-                stats.add("newSize", result.newSize);
-                stats.add("patchSize", result.patchSize);
-                stats.add("sizeRatio", result.sizeRatio);
-                stats.add("operationsCount", result.operationsCount);
-            });
-        } else {
-            json.addIfNotNull("reason", result.reason);
-            json.addIfNotNull("recommendation", result.recommendation);
-            json.addIfNotNull("error", result.error);
-            if (result.oldSize > 0) {
-                json.addObject("stats", stats -> {
-                    stats.add("oldSize", result.oldSize);
-                    stats.add("newSize", result.newSize);
-                    stats.add("patchSize", result.patchSize);
-                    stats.add("sizeRatio", result.sizeRatio);
-                    stats.add("operationsCount", result.operationsCount);
-                });
-            }
-        }
-        
-        return json.build();
-    }
     
     static class PatchResult {
         boolean success;
@@ -153,11 +123,7 @@ public class DiffService {
         String reason;
         String recommendation;
         String error;
-        int oldSize;
-        int newSize;
-        int patchSize;
-        double sizeRatio;
-        int operationsCount;
+        Stats stats;
         
         public PatchResult(boolean success, String patchFilePath, String patchContent,
                          String sourceHash, String targetHash, String reason,
@@ -171,6 +137,18 @@ public class DiffService {
             this.reason = reason;
             this.recommendation = recommendation;
             this.error = error;
+            this.stats = new Stats(oldSize, newSize, patchSize, sizeRatio, operationsCount);
+        }
+    }
+    
+    static class Stats {
+        int oldSize;
+        int newSize;
+        int patchSize;
+        double sizeRatio;
+        int operationsCount;
+        
+        public Stats(int oldSize, int newSize, int patchSize, double sizeRatio, int operationsCount) {
             this.oldSize = oldSize;
             this.newSize = newSize;
             this.patchSize = patchSize;
