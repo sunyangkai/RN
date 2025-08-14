@@ -10,7 +10,8 @@ async function startApp() {
     const { default: App } = require('./App');
     AppRegistry.registerComponent(appName, () => App);
     
-    // 仍然检查bundle更新
+    // 测试gzip压缩的热更新 - 修复哈希计算
+    console.log('App启动 - gzip压缩版本测试（修复哈希）');
     checkAndUpdateBundle();
 }
 

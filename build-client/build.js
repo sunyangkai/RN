@@ -3,9 +3,10 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const { ensureDir, getVersion, readJsonFile, writeJsonFile } = require('./file-utils');
-const { calculateHash } = require('./hash-utils');
+const { calculateHash, calculateBinaryHash } = require('./hash-utils');
 const CONFIG = require('./config');
 const DiffService = require('./diff-service');
+const CompressionUtils = require('./compression-utils');
 
 
 async function buildBundle() {
@@ -34,8 +35,24 @@ async function buildBundle() {
     
     console.log(`[OK] 构建完成！`);
     console.log(`[PATH] Bundle路径: ${versionBundlePath}`);
-    console.log(`[SIZE] 文件大小: ${bundleSize} 字符`);
+    console.log(`[SIZE] 文件大小: ${CompressionUtils.formatBytes(bundleSize)}`);
     console.log(`[HASH] 文件哈希: ${bundleHash}`);
+    
+    // 压缩Bundle文件
+    console.log('\n=== 压缩Bundle文件 ===');
+    const compressionResult = await CompressionUtils.compressFile(versionBundlePath);
+    
+    let compressedInfo = null;
+    if (compressionResult.success) {
+      const compressedBuffer = fs.readFileSync(compressionResult.compressedPath);
+      const compressedHash = calculateBinaryHash(compressedBuffer);
+      compressedInfo = {
+        path: compressionResult.compressedPath,
+        hash: compressedHash,
+        size: compressionResult.compressedSize,
+        compressionRatio: compressionResult.compressionRatio
+      };
+    }
     
     return {
       version,
@@ -43,7 +60,8 @@ async function buildBundle() {
       bundleInfo: {
         hash: bundleHash,
         size: bundleSize
-      }
+      },
+      compressedBundle: compressedInfo
     };
     
   } catch (error) {
@@ -101,9 +119,25 @@ async function buildPatch() {
     
     console.log(`[PATH] 补丁文件: ${finalPatchPath}`);
     
+    // 压缩补丁文件
+    console.log('\n=== 压缩补丁文件 ===');
+    const patchCompressionResult = await CompressionUtils.compressFile(finalPatchPath);
+    
     // 计算相关哈希信息
     const patchContent = fs.readFileSync(finalPatchPath, 'utf8');
     const patchHash = calculateHash(patchContent);
+    
+    let compressedPatchInfo = null;
+    if (patchCompressionResult.success) {
+      const compressedPatchBuffer = fs.readFileSync(patchCompressionResult.compressedPath);
+      const compressedPatchHash = calculateBinaryHash(compressedPatchBuffer);
+      compressedPatchInfo = {
+        path: patchCompressionResult.compressedPath,
+        hash: compressedPatchHash,
+        size: patchCompressionResult.compressedSize,
+        compressionRatio: patchCompressionResult.compressionRatio
+      };
+    }
     
     const newBundleContent = fs.readFileSync(newBundlePath, 'utf8');
     const newBundleSize = newBundleContent.length;
@@ -113,10 +147,15 @@ async function buildPatch() {
     const previousHash = calculateHash(oldBundleContent);
     
     console.log('[OK] 补丁包生成完成!', 
-      `   补丁大小: ${patchResult.stats.patchSize} 字符`, 
+      `   补丁大小: ${CompressionUtils.formatBytes(patchResult.stats.patchSize)}`, 
       `,  变更比例: ${(patchResult.stats.sizeRatio * 100).toFixed(1)}%`,
       `,  操作数量: ${patchResult.stats.operationsCount}`
-    );    
+    );
+    
+    if (compressedPatchInfo) {
+      console.log(`[GZIP] 压缩后大小: ${CompressionUtils.formatBytes(compressedPatchInfo.size)}`);
+      console.log(`[GZIP] 压缩率: ${compressedPatchInfo.compressionRatio.toFixed(1)}%`);
+    }    
     return {
       version: currentVersion,
       previousVersion,
@@ -130,6 +169,7 @@ async function buildPatch() {
         hash: patchHash,
         size: patchResult.stats.patchSize
       },
+      compressedPatch: compressedPatchInfo,
       stats: patchResult.stats
     };
     
@@ -223,11 +263,12 @@ function updateManifest(manifestData) {
 
 // 创建更新manifest（统一处理全量和差量）
 function createUpdateManifest(result) {
-  const { version, bundleInfo, patchInfo, previousVersion } = result;
+  const { version, bundleInfo, patchInfo, previousVersion, compressedBundle, compressedPatch } = result;
   
   const manifest = {
     version: version,
     updateType: patchInfo ? "delta" : "full",
+    compression: "gzip",
     fullBundle: {
       url: `${CONFIG.SERVER_BASE_URL}/bundles/${version}/${CONFIG.BUNDLE_FILE}`,
       hash: bundleInfo.hash,
@@ -238,6 +279,16 @@ function createUpdateManifest(result) {
     }
   };
 
+  // 添加压缩Bundle信息
+  if (compressedBundle) {
+    manifest.fullBundle.compressed = {
+      url: `${CONFIG.SERVER_BASE_URL}/bundles/${version}/${CONFIG.BUNDLE_FILE}.gz`,
+      hash: compressedBundle.hash,
+      size: compressedBundle.size,
+      compressionRatio: compressedBundle.compressionRatio
+    };
+  }
+
   // 如果有补丁信息，则添加差量更新和previousHash
   if (patchInfo && previousVersion) {
     manifest.fullBundle.previousHash = bundleInfo.previousHash;
@@ -247,6 +298,16 @@ function createUpdateManifest(result) {
       patchSize: patchInfo.size,
       targetHash: bundleInfo.hash
     };
+
+    // 添加压缩补丁信息
+    if (compressedPatch) {
+      manifest.deltaUpdate.compressed = {
+        patchUrl: `${CONFIG.SERVER_BASE_URL}/patches/${previousVersion}-to-${version}.patch.gz`,
+        patchHash: compressedPatch.hash,
+        patchSize: compressedPatch.size,
+        compressionRatio: compressedPatch.compressionRatio
+      };
+    }
   } else {
     manifest.deltaUpdate = null;
   }

@@ -9,24 +9,31 @@ const { PatchApplier } = NativeModules;
 const BUNDLE_LOCAL_PATH = `${RNFS.DocumentDirectoryPath}/hotupdate.bundle`; // 本地上一个版本的资源文件
 const BUNDLE_TEMP_PATH = `${RNFS.DocumentDirectoryPath}/hotupdate.bundle.tmp`; // 通过本次热更新生成的临时资源文件
 const PATCH_TEMP_PATH = `${RNFS.DocumentDirectoryPath}/hotupdate.patch.tmp`; // 补丁文件被写入这个本地路径
+const COMPRESSED_BUNDLE_TEMP_PATH = `${RNFS.DocumentDirectoryPath}/hotupdate.bundle.gz.tmp`; // 压缩bundle临时文件
+const COMPRESSED_PATCH_TEMP_PATH = `${RNFS.DocumentDirectoryPath}/hotupdate.patch.gz.tmp`; // 压缩patch临时文件
 const VERSION_KEY = 'hotupdate_version';
 
 async function cleanupTempFiles() {
   try {
-    if (await RNFS.exists(BUNDLE_TEMP_PATH)) {
-      await RNFS.unlink(BUNDLE_TEMP_PATH);
-      console.log('🧹 清理bundle临时文件');
-    }
-    if (await RNFS.exists(PATCH_TEMP_PATH)) {
-      await RNFS.unlink(PATCH_TEMP_PATH);
-      console.log('🧹 清理patch临时文件');
+    const tempFiles = [
+      BUNDLE_TEMP_PATH,
+      PATCH_TEMP_PATH,
+      COMPRESSED_BUNDLE_TEMP_PATH,
+      COMPRESSED_PATCH_TEMP_PATH
+    ];
+    
+    for (const filePath of tempFiles) {
+      if (await RNFS.exists(filePath)) {
+        await RNFS.unlink(filePath);
+        console.log(`🧹 清理临时文件: ${filePath.split('/').pop()}`);
+      }
     }
   } catch (error) {
     console.warn('清理临时文件失败:', error);
   }
 }
 
-// 计算文件哈希
+// 计算文件哈希（文本文件）
 async function calculateFileHash(filePath) {
   try {
     if (!(await RNFS.exists(filePath))) return null;
@@ -36,6 +43,112 @@ async function calculateFileHash(filePath) {
     console.error('计算文件哈希失败:', error);
     return null;
   }
+}
+
+// 计算二进制文件哈希（如gzip文件）
+async function calculateBinaryFileHash(filePath) {
+  try {
+    if (!(await RNFS.exists(filePath))) return null;
+    const fileContent = await RNFS.readFile(filePath, 'base64');
+    // 将base64转换为WordArray后计算哈希
+    const wordArray = CryptoJS.enc.Base64.parse(fileContent);
+    return 'sha256:' + CryptoJS.SHA256(wordArray).toString(CryptoJS.enc.Hex);
+  } catch (error) {
+    console.error('计算二进制文件哈希失败:', error);
+    return null;
+  }
+}
+
+// 优先下载压缩文件（如果可用）
+async function downloadFileWithCompression(manifest, fileType, tempPath, compressedTempPath) {
+  let downloadInfo;
+  let useCompression = false;
+  
+  if (fileType === 'bundle' && manifest.fullBundle?.compressed) {
+    // 优先下载压缩Bundle
+    downloadInfo = {
+      url: manifest.fullBundle.compressed.url,
+      expectedHash: manifest.fullBundle.compressed.hash,
+      expectedSize: manifest.fullBundle.compressed.size
+    };
+    useCompression = true;
+    console.log('📦 使用gzip压缩Bundle下载');
+  } else if (fileType === 'patch' && manifest.deltaUpdate?.compressed) {
+    // 优先下载压缩Patch
+    downloadInfo = {
+      url: manifest.deltaUpdate.compressed.patchUrl,
+      expectedHash: manifest.deltaUpdate.compressed.patchHash,
+      expectedSize: manifest.deltaUpdate.compressed.patchSize
+    };
+    useCompression = true;
+    console.log('📦 使用gzip压缩Patch下载');
+  } else {
+    // 回退到未压缩版本
+    if (fileType === 'bundle') {
+      downloadInfo = {
+        url: manifest.fullBundle.url,
+        expectedHash: manifest.fullBundle.hash,
+        expectedSize: manifest.fullBundle.size
+      };
+    } else if (fileType === 'patch') {
+      downloadInfo = {
+        url: manifest.deltaUpdate.patchUrl,
+        expectedHash: manifest.deltaUpdate.patchHash,
+        expectedSize: manifest.deltaUpdate.patchSize
+      };
+    }
+    console.log(`📦 使用未压缩${fileType}下载`);
+  }
+  
+  const targetTempPath = useCompression ? compressedTempPath : tempPath;
+  
+  // 下载文件
+  console.log(`⬇️ 开始下载${fileType}: ${downloadInfo.url}`);
+  const downloadResult = await RNFS.downloadFile({
+    fromUrl: downloadInfo.url,
+    toFile: targetTempPath,
+  }).promise;
+  
+  if (downloadResult.statusCode !== 200) {
+    throw new Error(`下载失败，状态码: ${downloadResult.statusCode}`);
+  }
+  
+  // 验证下载文件（根据文件类型选择哈希计算方法）
+  const downloadedHash = useCompression 
+    ? await calculateBinaryFileHash(targetTempPath)
+    : await calculateFileHash(targetTempPath);
+    
+  if (downloadedHash !== downloadInfo.expectedHash) {
+    console.error(`${fileType}哈希验证失败:`, {
+      expected: downloadInfo.expectedHash,
+      actual: downloadedHash,
+      useCompression: useCompression,
+      filePath: targetTempPath
+    });
+    throw new Error(`${fileType}文件哈希验证失败`);
+  }
+  
+  // 如果是压缩文件，需要解压
+  if (useCompression) {
+    console.log(`📦 解压${fileType}文件...`);
+    const decompressResult = await PatchApplier.decompressGzipFile(targetTempPath, tempPath);
+    
+    if (!decompressResult.success) {
+      throw new Error(`解压${fileType}失败`);
+    }
+    
+    console.log(`✅ ${fileType}解压成功，原始大小: ${Math.round(decompressResult.originalSize)} bytes, 解压后: ${Math.round(decompressResult.decompressedSize)} bytes`);
+    
+    // 清理压缩文件
+    await RNFS.unlink(targetTempPath);
+  }
+  
+  return {
+    success: true,
+    tempPath: tempPath,
+    useCompression: useCompression,
+    downloadedSize: downloadResult.bytesWritten
+  };
 }
 
 // 应用补丁到bundle文件
@@ -208,11 +321,23 @@ export async function checkAndUpdateBundle() {
 
         const deltaInfo = manifest.deltaUpdate;        
         try {
-          const patchDownloadResult = await RNFS.downloadFile({ fromUrl: deltaInfo.patchUrl, toFile: PATCH_TEMP_PATH }).promise;
-          console.log('下载补丁文件:', patchDownloadResult);
-          if (patchDownloadResult.statusCode === 200) {
+          // 使用新的压缩下载功能
+          const patchDownloadResult = await downloadFileWithCompression(
+            manifest, 
+            'patch', 
+            PATCH_TEMP_PATH, 
+            COMPRESSED_PATCH_TEMP_PATH
+          );
+          
+          if (patchDownloadResult.success) {
             const patchHash = await calculateFileHash(PATCH_TEMP_PATH); 
-            if (patchHash === deltaInfo.patchHash) {
+            const expectedHash = deltaInfo.patchHash;
+            
+            if (patchDownloadResult.useCompression) {
+              console.log(`📦 压缩补丁下载完成，节省 ${((1 - patchDownloadResult.downloadedSize / deltaInfo.patchSize) * 100).toFixed(1)}% 流量`);
+            }
+            
+            if (patchHash === expectedHash) {
               console.log('补丁文件哈希验证成功, 开始应用补丁');
               const patchSuccess = await applyPatch(
                 BUNDLE_LOCAL_PATH, 
@@ -249,32 +374,41 @@ export async function checkAndUpdateBundle() {
       }
       
       console.log('📦 执行完整下载...');
-      const downloadUrl = manifest.fullBundle?.url;
       
-      const downloadResult = await RNFS.downloadFile({
-        fromUrl: downloadUrl,
-        toFile: BUNDLE_TEMP_PATH,
-      }).promise;
-      
-      if (downloadResult.statusCode === 200) {
-        // 验证完整文件哈希（如果提供）
-        if (manifest.fullBundle?.hash) {
+      try {
+        // 使用新的压缩下载功能
+        const bundleDownloadResult = await downloadFileWithCompression(
+          manifest,
+          'bundle',
+          BUNDLE_TEMP_PATH,
+          COMPRESSED_BUNDLE_TEMP_PATH
+        );
+        
+        if (bundleDownloadResult.success) {
+          if (bundleDownloadResult.useCompression) {
+            console.log(`📦 压缩Bundle下载完成，节省 ${((1 - bundleDownloadResult.downloadedSize / manifest.fullBundle.size) * 100).toFixed(1)}% 流量`);
+          }
+          
+          // 验证完整文件哈希
           const fileHash = await calculateFileHash(BUNDLE_TEMP_PATH);
           if (fileHash !== manifest.fullBundle.hash) {
             console.warn('⚠️ 完整文件哈希验证失败');
             await cleanupTempFiles();
             return;
           }
+        
+          // 原子性替换
+          await RNFS.moveFile(BUNDLE_TEMP_PATH, BUNDLE_LOCAL_PATH);
+          await AsyncStorage.setItem(VERSION_KEY, manifest.version);
+          console.log('完整更新完成');
+          
+          showUpdateAlert();
+        } else {
+          console.warn('完整Bundle下载失败');
+          await cleanupTempFiles();
         }
-        
-        // 原子性替换
-        await RNFS.moveFile(BUNDLE_TEMP_PATH, BUNDLE_LOCAL_PATH);
-        await AsyncStorage.setItem(VERSION_KEY, manifest.version);
-        console.log('完整更新完成');
-        
-        showUpdateAlert();
-      } else {
-        console.warn('完整下载失败');
+      } catch (error) {
+        console.error('完整下载失败:', error);
         await cleanupTempFiles();
       }
     } else {
